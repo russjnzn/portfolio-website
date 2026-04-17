@@ -1,0 +1,435 @@
+/* ==========================================================================
+   projects.css — Projects canvas page
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Page base
+   -------------------------------------------------------------------------- */
+.projects-body {
+  overflow: hidden;
+  height: 100vh;
+  background: var(--color-bg);
+}
+
+.projects-canvas {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* --------------------------------------------------------------------------
+   Backdrop — appears behind the active (enlarged) card
+   -------------------------------------------------------------------------- */
+.card-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(0, 0, 0, 0.90);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 320ms ease;
+}
+
+.card-backdrop--visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* --------------------------------------------------------------------------
+   Close button — top center
+   -------------------------------------------------------------------------- */
+.projects-close {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  padding: 6px 14px;
+  border-radius: 999px;
+  text-decoration: none;
+  transition:
+    color        var(--dur-micro) var(--ease-spring),
+    border-color var(--dur-micro) var(--ease-spring);
+}
+.projects-close:hover {
+  color: var(--color-text-primary);
+  border-color: var(--color-accent-soft);
+}
+.projects-close svg { width: 14px; height: 14px; }
+
+/* --------------------------------------------------------------------------
+   Toolbar — bottom center
+   -------------------------------------------------------------------------- */
+.projects-toolbar {
+  position: fixed;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  display: flex;
+  gap: 10px;
+}
+
+.projects-toolbar-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  padding: 8px 18px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition:
+    color        var(--dur-micro) var(--ease-spring),
+    border-color var(--dur-micro) var(--ease-spring);
+}
+.projects-toolbar-btn:hover {
+  color: var(--color-accent);
+  border-color: var(--color-accent-soft);
+}
+.projects-toolbar-btn svg { width: 13px; height: 13px; flex-shrink: 0; }
+
+/* --------------------------------------------------------------------------
+   Quick contact — bottom right
+   -------------------------------------------------------------------------- */
+.projects-quick-contact {
+  position: fixed;
+  bottom: 32px;
+  right: 24px;
+  z-index: 50;
+  display: flex;
+  gap: 8px;
+}
+
+.projects-contact-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  transition:
+    color        var(--dur-micro) var(--ease-spring),
+    border-color var(--dur-micro) var(--ease-spring);
+}
+.projects-contact-icon:hover { color: var(--color-accent); border-color: var(--color-accent-soft); }
+.projects-contact-icon svg { width: 16px; height: 16px; }
+
+/* --------------------------------------------------------------------------
+   Theme toggle
+   -------------------------------------------------------------------------- */
+.projects-body .theme-toggle { top: 16px; right: 16px; }
+
+/* ==========================================================================
+   CARD — override components.css base
+   ========================================================================== */
+.projects-body .card {
+  width: 200px;
+  height: 280px;
+  cursor: pointer;
+  /* perspective inherited from components.css (1000px) */
+}
+
+/* Remove grab cursor */
+.projects-body .card,
+.projects-body .card:active { cursor: pointer; }
+
+/* Card inner — the element that flips and flies */
+.projects-body .card__inner {
+  /* transform-style: preserve-3d already set in components.css */
+  transition: transform 650ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Active card sits above the backdrop */
+.projects-body .card--active {
+  z-index: 100;
+}
+
+/* Subtle glow on hover for non-active cards */
+.projects-body .card:not(.card--active):hover .card__face {
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.10),
+    0 16px 40px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+/* ==========================================================================
+   CARD FACE — playing-card front (white card, always)
+   ========================================================================== */
+.card__face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  border-radius: 16px;
+  border: 1px solid #e4e0d8;
+  background: #f8f7f4;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.10),
+    0 8px 28px rgba(0, 0, 0, 0.42);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  transition: box-shadow 200ms ease;
+}
+
+/* Corner pips — top-left and bottom-right */
+.card__corner {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.1;
+}
+.card__corner--tl { top: 10px; left: 12px; }
+.card__corner--br { bottom: 10px; right: 12px; transform: rotate(180deg); }
+.card__corner-icon { font-size: 14px; line-height: 1; }
+.card__corner-icon-img { width: 14px; height: 14px; object-fit: contain; display: block; }
+
+/* Vertical category labels */
+.card__cat {
+  position: absolute;
+  writing-mode: vertical-rl;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 7.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #b4ac9e;
+  white-space: nowrap;
+  top: 50%;
+  pointer-events: none;
+  user-select: none;
+}
+/* Left: reads bottom → top */
+.card__cat--left  { left: 12px;  transform: translateY(-50%) rotate(180deg); }
+/* Right: reads top → bottom */
+.card__cat--right { right: 12px; transform: translateY(-50%); }
+
+/* Center: icon + title */
+.card__center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 36px 44px;
+  text-align: center;
+  pointer-events: none;
+}
+.card__icon  { font-size: 38px; line-height: 1; filter: saturate(0.85); }
+.card__icon-img { width: 42px; height: 42px; object-fit: contain; display: block; }
+.card__title {
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 100;
+  font-size: 15px;
+  color: #1a1816;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+}
+
+/* ==========================================================================
+   CARD BACK FACE — project detail (dark, pre-rotated 180°)
+   ========================================================================== */
+.card__back-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: rotateY(180deg);
+  border-radius: 16px;
+  border: 1px solid #e4e0d8;
+  background: #f8f7f4;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  padding: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  overflow: hidden;
+}
+
+/* Close (×) button — top right of back face */
+.card__back-close {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid #e4e0d8;
+  background: #f8f7f4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: color 150ms ease, border-color 150ms ease;
+  z-index: 1;
+}
+.card__back-close:hover { color: var(--color-surface-2); border-color: var(--color-accent-soft); }
+.card__back-close svg { width: 9px; height: 9px; pointer-events: none; }
+
+/* Header row: emoji + category chip */
+.card__back-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-right: 24px; /* leave room for close btn */
+}
+.card__back-emoji { font-size: 18px; line-height: 1; flex-shrink: 0; }
+.card__back-emoji-img { width: 20px; height: 20px; object-fit: contain; display: block; flex-shrink: 0; }
+.card__back-cat {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  background: var(--color-accent-glow);
+  border: 1px solid rgba(0, 128, 128, 0.22);
+  padding: 2px 6px;
+  border-radius: 3px;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+/* Project name */
+.card__back-name {
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 100;
+  font-size: 14px;
+  color: var(--color-surface-2);
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+}
+
+/* Preview image */
+.card__back-img {
+  width: 100%;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 7px;
+  background: var(--color-surface-2);
+  display: block;
+  border: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+/* Description — clamp to 4 lines */
+.card__back-desc {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 8px;
+  line-height: 1.55;
+  color: var(--color-text-secondary);
+  flex: 1;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+  -webkit-box-orient: vertical;
+}
+
+/* Link button */
+.card__back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  color: var(--color-accent);
+  border: 1px solid var(--color-accent-soft);
+  padding: 5px 10px;
+  border-radius: 5px;
+  text-decoration: none;
+  transition: background 150ms ease;
+}
+.card__back-btn:hover { background: var(--color-accent-glow); }
+
+/* ==========================================================================
+   LIGHT MODE — card face inverts to dark
+   ========================================================================== */
+html.light .card__face {
+  background: #000000;
+  border-color: #2e2b27;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.20),
+    0 8px 28px rgba(0, 0, 0, 0.25);
+}
+
+html.light .card__back-face {
+  background: #000000;
+  border-color: #1b1a19;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.20),
+    0 8px 28px rgba(0, 0, 0, 0.25);
+}
+
+html.light .card__title { color: #f0ece6; }
+html.light .card__cat   { color: #6a6057; }
+html.light .card__corner-icon { filter: invert(0.85); }
+
+html.light .projects-body .card:not(.card--active):hover .card__face {
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.22),
+    0 16px 40px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+html.light .card__back-close {
+  background: #26231f;
+  border-color: #2e2b27;
+  color: #a8a29e;
+}
+
+html.light .card__back-close:hover {
+  color: #f0ece6;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+html.light .card__back-cat {
+  color: #7dd3c7;
+  background: rgba(125, 211, 199, 0.08);
+  border: 1px solid rgba(125, 211, 199, 0.25);
+}
+
+html.light .card__back-name {
+  color: #f0ece6;
+}
+
+html.light .card__back-img {
+  background: #26231f;
+  border-color: #2e2b27;
+}
+
+html.light .card__back-desc {
+  color: #b8b2ab;
+}
+
+html.light .card__back-btn {
+  color: #7dd3c7;
+  border-color: rgba(125, 211, 199, 0.35);
+}
+
+html.light .card__back-btn:hover {
+  background: rgba(125, 211, 199, 0.08);
+}

@@ -1,0 +1,92 @@
+/* ==========================================================================
+   animations.css — All @keyframes definitions.
+   Selectors that USE these keyframes live in components.css or page CSS.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Loader dot — pulsing scale
+   -------------------------------------------------------------------------- */
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.6);
+    opacity: 0.7;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Typewriter cursor — blinking bar
+   -------------------------------------------------------------------------- */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+/* --------------------------------------------------------------------------
+   Background mesh blobs — slow drift
+   -------------------------------------------------------------------------- */
+@keyframes driftA {
+  0%   { transform: translate(0px, 0px) scale(1); }
+  100% { transform: translate(60px, -40px) scale(1.1); }
+}
+
+@keyframes driftB {
+  0%   { transform: translate(0px, 0px) scale(1); }
+  100% { transform: translate(-50px, 55px) scale(0.95); }
+}
+
+@keyframes driftC {
+  0%   { transform: translate(0px, 0px) scale(1); }
+  100% { transform: translate(40px, 60px) scale(1.05); }
+}
+
+/* --------------------------------------------------------------------------
+   Skeleton shimmer — loading state
+   -------------------------------------------------------------------------- */
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position:  400px 0; }
+}
+
+/* --------------------------------------------------------------------------
+   Generic fade-up entrance
+   -------------------------------------------------------------------------- */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Current timeline node glow pulse
+   -------------------------------------------------------------------------- */
+@keyframes glowPulse {
+  0%, 100% {
+    box-shadow: 0 0 6px 2px var(--color-accent);
+  }
+  50% {
+    box-shadow: 0 0 14px 5px var(--color-accent);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Loader exit — upward fade out
+   -------------------------------------------------------------------------- */
+@keyframes loaderExit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+}

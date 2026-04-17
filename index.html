@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Russel Janzen E. Mamaclay — Data Scientist &amp; ML Engineer</title>
+  <meta name="description" content="Personal portfolio of Russel Janzen E. Mamaclay, Data Scientist and Machine Learning Engineer based in the Philippines." />
+
+  <!-- FOWT prevention — sync, no defer, no async -->
+  <script src="js/main.js"></script>
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ['Syne', 'sans-serif'],
+            body:    ['DM Sans', 'sans-serif'],
+            mono:    ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            accent:        '#008080',
+            'accent-soft': '#005f5f',
+          },
+        },
+      },
+    };
+  </script>
+
+  <!-- Global CSS -->
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/animations.css" />
+  <link rel="stylesheet" href="css/components.css" />
+
+  <!-- Page CSS -->
+  <link rel="stylesheet" href="css/pages/landing.css" />
+</head>
+<body class="landing-body">
+
+  <!-- ================================================================
+       Particle canvas — 3D dot grid, sits behind everything
+       ================================================================ -->
+  <canvas id="bg-canvas" class="bg-canvas" aria-hidden="true"></canvas>
+
+  <!-- ================================================================
+       Loading Overlay
+       ================================================================ -->
+  <div id="loader" class="loader" role="status" aria-label="Loading">
+    <div class="loader__dot"></div>
+  </div>
+
+  <!-- ================================================================
+       Background Mesh
+       ================================================================ -->
+  <div id="bg-mesh" class="bg-mesh" aria-hidden="true">
+    <div class="bg-mesh__blob bg-mesh__blob--1"></div>
+    <div class="bg-mesh__blob bg-mesh__blob--2"></div>
+    <div class="bg-mesh__blob bg-mesh__blob--3"></div>
+  </div>
+
+  <!-- ================================================================
+       Main Hero Content
+       ================================================================ -->
+  <main id="main" class="landing-main">
+    <div id="hero" class="landing-hero">
+      <h1 id="name" class="landing-name">RUSSEL JANZEN E. MAMACLAY</h1>
+      <p id="roles" class="landing-roles" aria-live="polite" aria-label="Current role">
+        <span id="typewriter-text" class="typewriter"></span>
+        <span class="typewriter-cursor" aria-hidden="true">|</span>
+      </p>
+    </div>
+  </main>
+
+  <!-- ================================================================
+       AI Chat Widget — appears after dock, bottom centre
+       ================================================================ -->
+  <div id="chat-widget" class="chat-widget" aria-label="AI Chat Assistant">
+
+    <!-- Panel — slides up from the pill when open -->
+    <div id="chat-panel" class="chat-panel" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Chat with Russel">
+
+      <!-- Header — messaging-app style with profile photo -->
+      <div class="chat-panel__header">
+        <div class="chat-panel__profile">
+          <div class="chat-panel__avatar-wrap">
+            <img
+              src="assets/images/profile_pic.png"
+              alt="Russel Janzen E. Mamaclay"
+              class="chat-panel__avatar"
+              width="38"
+              height="38"
+            />
+            <span class="chat-panel__status-dot" aria-hidden="true"></span>
+          </div>
+          <div class="chat-panel__profile-info">
+            <span class="chat-panel__name">Russel Janzen</span>
+            <span class="chat-panel__status">AI · Responds instantly</span>
+          </div>
+        </div>
+        <button id="chat-close" class="chat-panel__close" aria-label="Close chat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+            <path d="M18 6 6 18M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Messages -->
+      <div id="chat-messages" class="chat-messages" role="log" aria-live="polite" aria-label="Chat messages">
+
+        <!-- Welcome message with avatar -->
+        <div class="chat-welcome">
+          <img
+            src="assets/images/profile_pic.png"
+            alt="Russel"
+            class="chat-msg__avatar"
+            aria-hidden="true"
+          />
+          <p>Hey! I'm Russel's AI. Feel free to ask me anything — about my work, projects, background, or anything else you're curious about.</p>
+        </div>
+
+        <!-- Typing indicator with avatar -->
+        <div id="chat-typing" class="chat-typing" aria-label="Russel is typing" aria-hidden="true">
+          <img
+            src="assets/images/profile_pic.png"
+            alt=""
+            class="chat-msg__avatar"
+            aria-hidden="true"
+          />
+          <div class="chat-typing__dots">
+            <span></span><span></span><span></span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Input pill — always visible; doubles as input bar when panel is open -->
+    <div class="chat-input-wrap" id="chat-input-wrap">
+      <img
+        src="assets/images/profile_pic.png"
+        alt=""
+        class="chat-input-avatar"
+        aria-hidden="true"
+        width="22"
+        height="22"
+      />
+      <input
+        id="chat-input"
+        type="text"
+        class="chat-input"
+        placeholder="Message Russel's AI..."
+        aria-label="Chat message input"
+        autocomplete="off"
+        maxlength="500"
+      />
+      <button id="chat-send" class="chat-send-btn" aria-label="Send message">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+      </button>
+    </div>
+
+  </div>
+
+  <!-- ================================================================
+       Dock Navigation
+       ================================================================ -->
+  <nav id="dock" class="dock dock--hidden" role="navigation" aria-label="Main navigation">
+
+    <div class="dock__item" data-target="about.html" role="button" tabindex="0" aria-label="About">
+      <svg class="dock__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="8" r="4"/>
+        <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+      </svg>
+      <span class="dock__label">About</span>
+      <span class="dock__dot"></span>
+    </div>
+
+    <div class="dock__item" data-target="timeline.html" role="button" tabindex="0" aria-label="Timeline">
+      <svg class="dock__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <!-- horizontal line -->
+        <line x1="4" y1="12" x2="20" y2="12"/>
+
+        <!-- vertical connector -->
+        <line x1="12" y1="12" x2="12" y2="18"/>
+
+        <!-- top nodes -->
+        <circle cx="7" cy="8" r="2.5" fill="currentColor" stroke="none"/>
+        <circle cx="17" cy="8" r="2.5" fill="currentColor" stroke="none"/>
+
+        <!-- bottom node -->
+        <circle cx="12" cy="20" r="2.5" fill="currentColor" stroke="none"/>
+      </svg>
+      <span class="dock__label">Timeline</span>
+      <span class="dock__dot"></span>
+    </div>
+
+    <div class="dock__item" data-target="projects.html" role="button" tabindex="0" aria-label="Projects">
+      <svg class="dock__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="3" width="8" height="8" rx="1"/>
+        <rect x="13" y="3" width="8" height="8" rx="1"/>
+        <rect x="3" y="13" width="8" height="8" rx="1"/>
+        <rect x="13" y="13" width="8" height="8" rx="1"/>
+      </svg>
+      <span class="dock__label">Projects</span>
+      <span class="dock__dot"></span>
+    </div>
+
+    <div class="dock__item" data-target="skills.html" role="button" tabindex="0" aria-label="Skills">
+      <svg class="dock__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+      </svg>
+      <span class="dock__label">Skills</span>
+      <span class="dock__dot"></span>
+    </div>
+
+    <div class="dock__item" data-target="contact" role="button" tabindex="0" aria-label="Contact">
+      <svg class="dock__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="2" y="4" width="20" height="16" rx="2"/>
+        <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+      </svg>
+      <span class="dock__label">Contact</span>
+      <span class="dock__dot"></span>
+    </div>
+
+  </nav>
+
+  <!-- ================================================================
+       Theme Toggle
+       ================================================================ -->
+  <button id="theme-btn" class="theme-toggle" aria-label="Toggle color theme" data-theme-icon></button>
+
+  <!-- ================================================================
+       Contact Modal
+       ================================================================ -->
+  <div id="contact-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-card">
+      <button class="modal-card__close" data-close-modal="contact-modal" aria-label="Close contact modal">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <path d="M18 6 6 18M6 6l12 12"/>
+        </svg>
+      </button>
+
+      <h2 id="modal-title" class="modal-card__title">Let's connect.</h2>
+
+      <div
+        id="modal-email-row"
+        class="modal-row"
+        data-email="russeljanzen.mamaclay@gmail.com"
+        role="button"
+        tabindex="0"
+        aria-label="Email — click to copy"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="2" y="4" width="20" height="16" rx="2"/>
+          <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+        </svg>
+        <span class="modal-row__text">mamaclay.russeljanzen@gmail.com</span>
+        <span id="modal-email-hint" class="modal-row__hint">Click to copy</span>
+      </div>
+
+      <a
+        href="https://linkedin.com/in/russeljanzen-mamaclay"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="modal-row"
+        aria-label="LinkedIn profile (opens in new tab)"
+      >
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/>
+          <rect x="2" y="9" width="4" height="12"/>
+          <circle cx="4" cy="4" r="2"/>
+        </svg>
+        <span class="modal-row__text">linkedin.com/in/russeljanzen-mamaclay</span>
+        <span class="modal-row__hint">Opens LinkedIn</span>
+      </a>
+
+    </div>
+  </div>
+
+  <!-- Page scripts — deferred so DOM is ready -->
+  <script src="js/bg-particles.js" defer></script>
+  <script src="js/dock.js" defer></script>
+  <script src="js/pages/landing.js" defer></script>
+
+</body>
+</html>

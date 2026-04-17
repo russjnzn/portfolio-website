@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Timeline — Russel Janzen E. Mamaclay</title>
+  <meta name="description" content="Education and experience timeline of Russel Janzen E. Mamaclay." />
+
+  <!-- FOWT prevention -->
+  <script src="js/main.js"></script>
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ['Syne', 'sans-serif'],
+            body:    ['DM Sans', 'sans-serif'],
+            mono:    ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            accent:        '#008080',
+            'accent-soft': '#005f5f',
+          },
+        },
+      },
+    };
+  </script>
+
+  <!-- Global CSS -->
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/animations.css" />
+  <link rel="stylesheet" href="css/components.css" />
+
+  <!-- Page CSS -->
+  <link rel="stylesheet" href="css/pages/timeline.css" />
+</head>
+<body class="timeline-page">
+
+  <!-- ================================================================
+       Navigation Bar
+       ================================================================ -->
+  <header>
+    <nav class="navbar" role="navigation" aria-label="Site navigation">
+      <a href="index.html" class="navbar__logo" aria-label="Home">RJM</a>
+
+      <ul class="navbar__links" role="list">
+        <li><a href="about.html"    class="navbar__link" data-page="about">About</a></li>
+        <li><a href="timeline.html" class="navbar__link" data-page="timeline">Timeline</a></li>
+        <li><a href="projects.html" class="navbar__link" data-page="projects">Projects</a></li>
+        <li><a href="skills.html"   class="navbar__link" data-page="skills">Skills</a></li>
+      </ul>
+
+      <div class="navbar__right">
+        <button id="theme-btn" class="theme-toggle" aria-label="Toggle color theme" data-theme-icon></button>
+        <button id="hamburger-btn" class="navbar__hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-menu">
+          <span></span><span></span><span></span>
+        </button>
+        <!-- <a href="index.html" class="navbar__close" aria-label="Return to home">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <path d="M18 6 6 18M6 6l12 12"/>
+          </svg>
+        </a> -->
+      </div>
+    </nav>
+
+    <div id="mobile-menu" class="navbar__mobile-menu" role="menu">
+      <a href="about.html"    class="navbar__mobile-link" role="menuitem">About</a>
+      <a href="timeline.html" class="navbar__mobile-link navbar__mobile-link--active" role="menuitem">Timeline</a>
+      <a href="projects.html" class="navbar__mobile-link" role="menuitem">Projects</a>
+      <a href="skills.html"   class="navbar__mobile-link" role="menuitem">Skills</a>
+    </div>
+  </header>
+
+  <!-- ================================================================
+       Main Content
+       ================================================================ -->
+  <main>
+    <div class="timeline-content">
+
+      <div class="reveal">
+        <h1 class="timeline-page-title">Timeline</h1>
+        <p class="timeline-page-subtitle">My education and professional journey.</p>
+      </div>
+
+      <!-- Toggle Pills -->
+      <div class="timeline-toggles reveal" role="group" aria-label="Filter timeline by type">
+        <button
+          class="toggle-btn toggle-btn--active"
+          data-filter="education"
+          aria-pressed="true"
+        >Education</button>
+        <button
+          class="toggle-btn toggle-btn--active"
+          data-filter="experience"
+          aria-pressed="true"
+        >Experience</button>
+      </div>
+
+      <!-- Empty state -->
+      <p id="timeline-empty" class="timeline-empty" aria-live="polite">
+        No entries to show. Select a filter above.
+      </p>
+
+      <!-- ============================================================
+           Timeline Entries
+           ============================================================ -->
+      <div class="timeline-spine" role="list">
+
+        <!-- ─── Master's Degree ──────────────────────────────── -->
+        <article class="timeline-entry reveal-right" data-type="education" role="listitem">
+          <div class="timeline-node timeline-node--current" aria-label="Ongoing" title="Ongoing"></div>
+          <div class="timeline-entry-content">
+            <p class="timeline-date">August 2026 — Present</p>
+            <h2 class="timeline-org">Master's Degree in Computer Science</h2>
+            <p class="timeline-role">Georgia Institute of Technology</p>
+            <p class="timeline-desc">
+              My studies focused on advanced topics such 
+              as statistical modeling, data mining, and scalable machine learning systems. Through hands-on 
+              projects and coursework, I developed strong expertise in building, evaluating, and 
+              deploying intelligent data-driven solutions.
+            </p>
+          </div>
+        </article>
+
+        <!-- ─── CURRENT — Senior Officer Jollibee Group ─────────────────── -->
+        <article class="timeline-entry reveal-right" data-type="experience" role="listitem">
+          <div class="timeline-node timeline-node--current" aria-label="Current position" title="Current"></div>
+          <div class="timeline-entry-content">
+            <p class="timeline-date">Nov 2025 — Present</p>
+            <h2 class="timeline-org">Jollibee Group</h2>
+            <p class="timeline-role">Senior Officer (Data Scientist)</p>
+            <p class="timeline-desc">
+              As a Senior Officer in the Global Data Analytics and AI department at Jollibee Group, 
+              I led the development of end-to-end data solutions, integrating data engineering, 
+              analytics, and machine learning into a unified workflow. Engineered features and developed predictive models, 
+              overseeing the full lifecycle from data ingestion to deployment to drive data-informed decision-making.
+            </p>
+          </div>
+        </article>
+
+
+
+        <!-- ─── Data Analyst II ──────────────────────────────── -->
+        <article class="timeline-entry reveal-right" data-type="experience" role="listitem">
+          <div class="timeline-node" aria-hidden="true"></div>
+          <div class="timeline-entry-content">
+            <p class="timeline-date">Oct 2024 — Oct 2025</p>
+            <h2 class="timeline-org">Regal Rexnord</h2>
+            <p class="timeline-role">Data Analyst II</p>
+            <p class="timeline-desc">
+              As a Data Analyst II at Regal Rexnord, I developed interactive Power BI dashboards 
+              that translated complex data into actionable insights for better decision-making. 
+              I also built predictive machine learning models 
+              and integrated external data through web scraping to enhance the depth and accuracy of analytics.
+            </p>
+          </div>
+        </article>
+
+        <!-- ─── B.S. Computer Science ──────────────────────── -->
+        <article class="timeline-entry reveal-right" data-type="education" role="listitem">
+          <div class="timeline-node" aria-hidden="true"></div>
+          <div class="timeline-entry-content">
+            <p class="timeline-date">2020 — 2024</p>
+            <h2 class="timeline-org">University of Santo Tomas</h2>
+            <p class="timeline-role">B.S. Computer Science — Specializing in Data Science</p>
+            <p class="timeline-desc">
+              I graduated <b>Magna Cum Laude</b> and was a consistent Dean’s Lister, reflecting strong 
+              academic performance throughout my studies. Beyond academics, I held numerous leadership 
+              positions in both local and university-wide student councils, where I contributed to student 
+              initiatives and organizational development.
+            </p>
+            <img
+              src="https://placehold.co/320x120/0f0f0f/2a2a2a?text=University+of+SE+Philippines"
+              alt="University of Southeastern Philippines"
+              class="timeline-thumb"
+              loading="lazy"
+              width="320"
+              height="120"
+            />
+          </div>
+        </article>
+        <!-- ─── Published Paper ──────────────────────── -->
+        <article class="timeline-entry reveal-right" data-type="education" role="listitem">
+          <div class="timeline-node" aria-hidden="true"></div>
+          <div class="timeline-entry-content">
+            <p class="timeline-date">July 2024</p>
+            <h2 class="timeline-org">10th International Conference on Smart Computing and Communication</h2>
+            <p class="timeline-role">Presenter and Author</p>
+            <p class="timeline-desc">
+              Presented and published our undergraduate thesis, 
+              "Mental State Recognition through Speech Analysis Using Bidirectional Long Short-Term Memory Network 
+              and Convolutional Neural Network Hybrid Model," 
+              highlighting innovative techniques in speech analysis and mental state recognition.
+            </p>
+            <img
+              src="https://placehold.co/320x120/0f0f0f/2a2a2a?text=University+of+SE+Philippines"
+              alt="University of Southeastern Philippines"
+              class="timeline-thumb"
+              loading="lazy"
+              width="320"
+              height="120"
+            />
+          </div>
+        </article>
+        <!-- ─── Data Science Intern ──────────────────────────────── -->
+        <article class="timeline-entry reveal-right" data-type="experience" role="listitem">
+          <div class="timeline-node" aria-hidden="true"></div>
+          <div class="timeline-entry-content">
+            <p class="timeline-date">Jan 2024 — April 2024</p>
+            <h2 class="timeline-org">SM Investments Corporation -  DataLabs</h2>
+            <p class="timeline-role">Data Science Intern - Merchandise Analytics</p>
+            <p class="timeline-desc">
+              I developed NLP-driven pipelines using DistilBERT to extract structured information such as brands, 
+              measurements, and packaging details from unstructured product data. I improved data extraction accuracy, 
+              enabling more reliable analytics for merchandising insights.
+            </p>
+          </div>
+        </article>
+
+        <!-- ─── SHS ──────────────────────── -->
+        <article class="timeline-entry reveal-right" data-type="education" role="listitem">
+          <div class="timeline-node" aria-hidden="true"></div>
+          <div class="timeline-entry-content">
+            <p class="timeline-date">2018 — 2020</p>
+            <h2 class="timeline-org">University of Santo Tomas</h2>
+            <p class="timeline-role">Senior High School - STEM Strand</p>
+            <p class="timeline-desc">
+              I also took on leadership roles in the student council, 
+              actively contributing to student programs and initiatives. 
+              My involvement helped develop my organizational, leadership, 
+              and teamwork skills early on.
+            </p>
+            <img
+              src="https://placehold.co/320x120/0f0f0f/2a2a2a?text=University+of+SE+Philippines"
+              alt="University of Southeastern Philippines"
+              class="timeline-thumb"
+              loading="lazy"
+              width="320"
+              height="120"
+            />
+          </div>
+        </article>
+      </div>
+      <!-- end .timeline-spine -->
+
+    </div>
+  </main>
+
+  <!-- Page scripts -->
+  <script src="js/animations.js" defer></script>
+  <script src="js/pages/timeline.js" defer></script>
+
+</body>
+</html>

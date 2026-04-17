@@ -1,0 +1,199 @@
+/* ==========================================================================
+   timeline.css — Timeline page specific styles
+   ========================================================================== */
+
+.timeline-page {
+  min-height: 100vh;
+}
+
+.timeline-content {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 60px 24px 100px;
+}
+
+/* --------------------------------------------------------------------------
+   Page title
+   -------------------------------------------------------------------------- */
+.timeline-page-title {
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 100;
+  font-size: clamp(28px, 4vw, 40px);
+  color: var(--color-text-primary);
+  margin-bottom: 8px;
+}
+
+.timeline-page-subtitle {
+  font-size: 15px;
+  color: var(--color-text-secondary);
+  margin-bottom: 40px;
+}
+
+/* --------------------------------------------------------------------------
+   Toggle pills
+   -------------------------------------------------------------------------- */
+.timeline-toggles {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 48px;
+}
+
+.toggle-btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  padding: 8px 20px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition:
+    background    var(--dur-standard) var(--ease-spring),
+    color         var(--dur-standard) var(--ease-spring),
+    border-color  var(--dur-standard) var(--ease-spring);
+}
+
+.toggle-btn--active {
+  background: var(--color-accent);
+  color: #ffffff;
+  border-color: var(--color-accent);
+}
+
+.toggle-btn:not(.toggle-btn--active):hover {
+  color: var(--color-text-secondary);
+  border-color: var(--color-text-muted);
+}
+
+/* --------------------------------------------------------------------------
+   Timeline spine + entries
+   -------------------------------------------------------------------------- */
+.timeline-spine {
+  position: relative;
+  padding-left: 48px;
+}
+
+.timeline-spine::before {
+  content: '';
+  position: absolute;
+  left: 14px;
+  top: 8px;
+  bottom: 0;
+  width: 1px;
+  background: var(--color-border);
+}
+
+/* --------------------------------------------------------------------------
+   Individual timeline entry
+   -------------------------------------------------------------------------- */
+.timeline-entry {
+  position: relative;
+  margin-bottom: 48px;
+}
+
+.timeline-entry:last-child {
+  margin-bottom: 0;
+}
+
+/* Circle node on the spine */
+.timeline-node {
+  position: absolute;
+  left: -40px;
+  top: 6px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--color-border);
+  background: var(--color-bg);
+  transition:
+    border-color var(--dur-standard) var(--ease-spring),
+    background   var(--dur-standard) var(--ease-spring);
+}
+
+/* Current/active entry — teal filled + glow pulse */
+.timeline-node--current {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  animation: glowPulse 2.4s ease-in-out infinite;
+}
+
+/* Entry content */
+.timeline-entry-content {
+  padding-top: 2px;
+}
+
+.timeline-date {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin-bottom: 8px;
+  letter-spacing: 0.04em;
+}
+
+.timeline-org {
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 100;
+  font-size: 18px;
+  color: var(--color-text-primary);
+  margin-bottom: 4px;
+}
+
+.timeline-role {
+  font-size: 14px;
+  color: var(--color-accent);
+  margin-bottom: 10px;
+}
+
+.timeline-desc {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--color-text-secondary);
+}
+
+/* Optional image thumbnail */
+.timeline-thumb {
+  margin-top: 14px;
+  width: 100%;
+  max-width: 320px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+}
+
+/* --------------------------------------------------------------------------
+   Empty state (when no filter matches)
+   -------------------------------------------------------------------------- */
+.timeline-empty {
+  display: none;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--color-text-muted);
+  padding: 24px 0;
+}
+
+.timeline-empty--visible {
+  display: block;
+}
+
+/* --------------------------------------------------------------------------
+   Responsive
+   -------------------------------------------------------------------------- */
+@media (max-width: 640px) {
+  .timeline-content {
+    padding: 40px 16px 80px;
+  }
+
+  .timeline-spine {
+    padding-left: 36px;
+  }
+
+  .timeline-node {
+    left: -29px;
+    width: 14px;
+    height: 14px;
+  }
+
+  .timeline-spine::before {
+    left: 10px;
+  }
+}

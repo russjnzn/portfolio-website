@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Projects — Russel Janzen E. Mamaclay</title>
+  <meta name="description" content="Projects by Russel Janzen E. Mamaclay — ML and data science work." />
+
+  <!-- FOWT prevention -->
+  <script src="js/main.js"></script>
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ['Syne', 'sans-serif'],
+            body:    ['DM Sans', 'sans-serif'],
+            mono:    ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            accent:        '#008080',
+            'accent-soft': '#005f5f',
+          },
+        },
+      },
+    };
+  </script>
+
+  <!-- Global CSS -->
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/animations.css" />
+  <link rel="stylesheet" href="css/components.css" />
+
+  <!-- Page CSS -->
+  <link rel="stylesheet" href="css/pages/projects.css" />
+</head>
+<body class="projects-body">
+
+  <!-- ================================================================
+       Backdrop — dims everything behind the active card
+       ================================================================ -->
+  <div id="card-backdrop" class="card-backdrop" aria-hidden="true"></div>
+
+  <!-- ================================================================
+       Close button — top center
+       ================================================================ -->
+  <a href="index.html" class="projects-close" aria-label="Return to home">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+      <path d="M18 6 6 18M6 6l12 12"/>
+    </svg>
+    Close
+  </a>
+
+  <!-- ================================================================
+       Theme Toggle
+       ================================================================ -->
+  <button id="theme-btn" class="theme-toggle" aria-label="Toggle color theme" data-theme-icon></button>
+
+  <!-- ================================================================
+       Canvas — cards injected by JS
+       ================================================================ -->
+  <main id="projects-canvas" class="projects-canvas" aria-label="Interactive projects canvas">
+  </main>
+
+  <!-- ================================================================
+       Toolbar — Spread / Collapse
+       ================================================================ -->
+  <div class="projects-toolbar" role="toolbar" aria-label="Card layout controls">
+    <button id="spread-btn" class="projects-toolbar-btn" aria-pressed="false">
+      <!-- label set by JS on init -->
+    </button>
+  </div>
+
+  <!-- ================================================================
+       Quick contact icons
+       ================================================================ -->
+  <div class="projects-quick-contact" aria-label="Quick contact">
+    <a
+      href="mailto:mamaclay.russeljanzen@gmail.com"
+      class="projects-contact-icon"
+      aria-label="Send email"
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="2" y="4" width="20" height="16" rx="2"/>
+        <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+      </svg>
+    </a>
+    <a
+      href="https://linkedin.com/in/russeljanzen-mamaclay"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="projects-contact-icon"
+      aria-label="LinkedIn profile (opens in new tab)"
+    >
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/>
+        <rect x="2" y="9" width="4" height="12"/>
+        <circle cx="4" cy="4" r="2"/>
+      </svg>
+    </a>
+  </div>
+
+  <!-- ================================================================
+       Interaction hint
+       ================================================================ -->
+  <p id="interaction-hint" class="interaction-hint" aria-hidden="true">
+    Click any card to flip it open — or use Spread All to browse.
+  </p>
+
+  <!-- Page scripts -->
+  <script src="js/pages/projects.js" defer></script>
+
+</body>
+</html>
