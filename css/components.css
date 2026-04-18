@@ -28,18 +28,28 @@ html.light .navbar {
 }
 
 .navbar__logo {
-  font-family: 'DM Sans', sans-serif;
-  font-weight: 400;
-  font-size: 13px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--color-text-primary);
-  text-decoration: none;
-  /* push links + toggle to the far right */
+  display: block;
+  height: 40px; /* adjust based on your design */
+  width: auto;
+  object-fit: contain;
+  margin-right: auto; /* pushes nav links to the right */
+ align-items: center;   /* keeps image centered inside link */
   margin-right: auto;
   transition:
     opacity   400ms var(--ease-spring),
     transform 400ms var(--ease-spring);
+}
+
+.navbar__logo img {
+  display: block;
+  height: 40px;
+  width: auto;
+  object-fit: contain;
+}
+
+.navbar__logo:hover {
+  opacity: 0.8;
+  transform: scale(1.05);
 }
 
 .navbar__links {
