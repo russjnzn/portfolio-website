@@ -1,0 +1,688 @@
+/* ==========================================================================
+   zenzo.css — Interactive pet companion Zenzo.
+   Depends on css/main.css for design tokens.
+   Zenzo is rendered as inline SVG — all body parts are separately animated.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   World container
+   -------------------------------------------------------------------------- */
+#zenzo-world {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 90;
+  overflow: visible;
+}
+
+/* --------------------------------------------------------------------------
+   Character container
+   -------------------------------------------------------------------------- */
+#zenzo {
+  position: absolute;
+  width: 82px;
+  height: 82px;
+  cursor: grab;
+  pointer-events: auto;
+  user-select: none;
+  -webkit-user-select: none;
+  will-change: left, top;
+  outline: none;
+}
+
+#zenzo:focus-visible {
+  filter: drop-shadow(0 0 8px var(--color-accent));
+}
+
+/* Ground shadow */
+.zenzo__shadow {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 55%;
+  height: 10px;
+  background: radial-gradient(ellipse at center, rgba(0,128,128,0.28), transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  transition: width 0.3s ease, opacity 0.3s ease;
+}
+
+/* Particle container */
+.zenzo__particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+
+/* --------------------------------------------------------------------------
+   SVG character base
+   -------------------------------------------------------------------------- */
+.zenzo__svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+/* transform-box: fill-box makes transform-origin relative to the element's
+   own bounding box — essential for correct SVG element rotation pivots */
+.zsv-body,
+.zsv-head,
+.zsv-ear-l, .zsv-ear-r,
+.zsv-leg-fl, .zsv-leg-fr,
+.zsv-leg-bl, .zsv-leg-br,
+.zsv-tail,
+.zsv-antenna,
+.zsv-core,
+.zsv-antenna-ball,
+.zsv-antenna-glow-ring,
+.zsv-sparkle-1, .zsv-sparkle-2,
+.zsv-blink {
+  transform-box: fill-box;
+}
+
+/* Pivot points for each animated part */
+.zsv-leg-fl,
+.zsv-leg-fr,
+.zsv-leg-bl,
+.zsv-leg-br    { transform-origin: 50% 0%;    }  /* top-center of each leg    */
+.zsv-body      { transform-origin: 50% 50%;   }  /* body center               */
+.zsv-head      { transform-origin: 50% 100%;  }  /* base of neck              */
+.zsv-ear-l     { transform-origin: 80% 10%;   }  /* inner-top of left ear     */
+.zsv-ear-r     { transform-origin: 20% 10%;   }  /* inner-top of right ear    */
+.zsv-antenna   { transform-origin: 30% 100%;  }  /* base of antenna stick     */
+.zsv-tail      { transform-origin: 0%  100%;  }  /* root of tail at body      */
+.zsv-visor     { transform-origin: 50% 50%;   }  /* visor centered            */
+.zsv-core,
+.zsv-antenna-ball,
+.zsv-antenna-glow-ring,
+.zsv-sparkle-1,
+.zsv-sparkle-2 { transform-origin: 50% 50%;   }
+
+/* --------------------------------------------------------------------------
+   IDLE — always-on ambient animations
+   -------------------------------------------------------------------------- */
+
+/* Body breathing */
+.zsv-body {
+  animation: zsv-breathe 3.2s ease-in-out infinite;
+}
+
+/* Chest core glow */
+.zsv-core {
+  animation: zsv-core-pulse 1.9s ease-in-out infinite;
+}
+
+/* Antenna gentle sway */
+.zsv-antenna {
+  animation: zsv-antenna-sway 5s ease-in-out infinite;
+}
+
+/* Antenna ball brightness pulse */
+.zsv-antenna-ball {
+  animation: zsv-ball-glow 2.6s ease-in-out infinite;
+}
+
+/* Antenna outer glow ring */
+.zsv-antenna-glow-ring {
+  animation: zsv-ball-glow-ring 2.6s ease-in-out infinite;
+}
+
+/* Sparkles twinkle out of sync */
+.zsv-sparkle-1 {
+  animation: zsv-sparkle-twinkle 4s ease-in-out infinite;
+}
+.zsv-sparkle-2 {
+  animation: zsv-sparkle-twinkle 4s ease-in-out infinite 1.5s;
+}
+
+/* Eye blink — hidden most of the time */
+.zsv-blink {
+  opacity: 0;
+  animation: zsv-blink-anim 7s ease-in-out infinite;
+}
+
+/* --------------------------------------------------------------------------
+   WALKING state
+   -------------------------------------------------------------------------- */
+#zenzo.zenzo--walking .zsv-leg-fl { animation: zsv-leg-a 0.4s ease-in-out infinite; }
+#zenzo.zenzo--walking .zsv-leg-fr { animation: zsv-leg-b 0.4s ease-in-out infinite; }
+#zenzo.zenzo--walking .zsv-leg-bl { animation: zsv-leg-b 0.4s ease-in-out infinite; }
+#zenzo.zenzo--walking .zsv-leg-br { animation: zsv-leg-a 0.4s ease-in-out infinite; }
+
+/* Body doesn't breathe while walking — the div-level bob handles vertical movement */
+#zenzo.zenzo--walking .zsv-body { animation: none; }
+
+/* Head tilts side to side with each stride */
+#zenzo.zenzo--walking .zsv-head { animation: zsv-head-bob 0.4s ease-in-out infinite; }
+
+/* Tail wags while walking */
+#zenzo.zenzo--walking .zsv-tail { animation: zsv-tail-wag 0.4s ease-in-out infinite; }
+
+/* Shadow flattens when walking (feet lift slightly) */
+#zenzo.zenzo--walking .zenzo__shadow {
+  width: 45%;
+  opacity: 0.55;
+}
+
+/* Div-level bob for entire character while walking */
+#zenzo.zenzo--walking {
+  animation: zsv-walk-bob 0.4s ease-in-out infinite;
+}
+
+/* --------------------------------------------------------------------------
+   HAPPY state
+   -------------------------------------------------------------------------- */
+#zenzo.zenzo--happy {
+  animation: zsv-happy-jump 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+#zenzo.zenzo--happy .zsv-ear-l {
+  animation: zsv-ear-flap-l 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+#zenzo.zenzo--happy .zsv-ear-r {
+  animation: zsv-ear-flap-r 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* --------------------------------------------------------------------------
+   SLEEPING state
+   -------------------------------------------------------------------------- */
+/* Eyes stay closed while sleeping */
+#zenzo.zenzo--sleeping .zsv-blink {
+  opacity: 1;
+  animation: none;
+}
+
+/* Slow deep breathing */
+#zenzo.zenzo--sleeping .zsv-body {
+  animation: zsv-sleep-breathe 4.5s ease-in-out infinite;
+}
+
+/* Head droops to one side */
+#zenzo.zenzo--sleeping .zsv-head {
+  animation: zsv-sleep-tilt 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Core dims while sleeping */
+#zenzo.zenzo--sleeping .zsv-core {
+  animation-duration: 5s;
+  opacity: 0.45;
+}
+
+/* Antenna barely sways */
+#zenzo.zenzo--sleeping .zsv-antenna {
+  animation-duration: 10s;
+}
+
+/* --------------------------------------------------------------------------
+   DRAGGING state
+   -------------------------------------------------------------------------- */
+#zenzo.zenzo--dragging {
+  cursor: grabbing;
+  filter: drop-shadow(0 10px 22px rgba(0, 128, 128, 0.5));
+  z-index: 91;
+}
+
+/* Legs dangle loosely when picked up */
+#zenzo.zenzo--dragging .zsv-leg-fl,
+#zenzo.zenzo--dragging .zsv-leg-fr {
+  animation: zsv-legs-dangle-front 0.9s ease-in-out infinite;
+}
+#zenzo.zenzo--dragging .zsv-leg-bl,
+#zenzo.zenzo--dragging .zsv-leg-br {
+  animation: zsv-legs-dangle-back 0.9s ease-in-out infinite;
+}
+
+#zenzo.zenzo--dragging .zenzo__shadow {
+  opacity: 0;
+}
+
+/* --------------------------------------------------------------------------
+   LANDING squash animation
+   -------------------------------------------------------------------------- */
+#zenzo.zenzo--landing {
+  animation: zsv-land-squash 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* --------------------------------------------------------------------------
+   Mood states (sprite filter, not position)
+   -------------------------------------------------------------------------- */
+#zenzo.zenzo--hungry  .zenzo__svg { filter: saturate(0.65) brightness(0.9);  }
+#zenzo.zenzo--sad     .zenzo__svg { filter: saturate(0.45) brightness(0.85); }
+#zenzo.zenzo--tired   .zsv-core   { animation-duration: 5s; opacity: 0.35;   }
+
+/* --------------------------------------------------------------------------
+   Light mode — subtle drop-shadow so white Zenzo pops against white bg
+   -------------------------------------------------------------------------- */
+html.light #zenzo .zenzo__svg {
+  filter: drop-shadow(0 0 0.5px rgba(0,0,0,0.28)) drop-shadow(0 2px 5px rgba(0,0,0,0.13));
+}
+
+html.light #zenzo.zenzo--hungry .zenzo__svg {
+  filter: saturate(0.65) brightness(0.9)
+          drop-shadow(0 0 0.5px rgba(0,0,0,0.28)) drop-shadow(0 2px 5px rgba(0,0,0,0.13));
+}
+html.light #zenzo.zenzo--sad .zenzo__svg {
+  filter: saturate(0.45) brightness(0.85)
+          drop-shadow(0 0 0.5px rgba(0,0,0,0.28)) drop-shadow(0 2px 5px rgba(0,0,0,0.13));
+}
+
+/* --------------------------------------------------------------------------
+   Drop target highlight (applied to perchable elements during drag)
+   -------------------------------------------------------------------------- */
+.zenzo-drop-target {
+  outline:        1.5px solid var(--color-accent) !important;
+  outline-offset: 3px !important;
+  box-shadow:     0 0 14px rgba(0, 128, 128, 0.35) !important;
+}
+
+/* --------------------------------------------------------------------------
+   Quick-action menu
+   -------------------------------------------------------------------------- */
+#zenzo-menu {
+  position: absolute;
+  display: flex;
+  gap: 6px;
+  pointer-events: auto;
+  z-index: 92;
+  padding: 6px;
+  background: rgba(10, 10, 10, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--color-border);
+  border-radius: 100px;
+  animation: zsv-menu-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+html.light #zenzo-menu {
+  background: rgba(255, 255, 255, 0.88);
+}
+
+#zenzo-menu[hidden] { display: none; }
+
+.zenzo-menu__btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 17px;
+  line-height: 1;
+  transition: background 0.15s ease, transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.zenzo-menu__btn:hover {
+  background: var(--color-accent);
+  transform: scale(1.2);
+}
+.zenzo-menu__btn:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   Toys layer
+   -------------------------------------------------------------------------- */
+#zenzo-toys {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 89;
+}
+.zenzo-food-bowl {
+  position: absolute;
+  font-size: 30px;
+  pointer-events: none;
+  animation: zsv-food-appear 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.zenzo-ball {
+  position: absolute;
+  font-size: 22px;
+  pointer-events: none;
+}
+
+/* --------------------------------------------------------------------------
+   First-visit hint
+   -------------------------------------------------------------------------- */
+#zenzo-hint {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(10, 10, 10, 0.88);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  padding: 7px 16px;
+  border-radius: 100px;
+  z-index: 93;
+  pointer-events: none;
+  white-space: nowrap;
+  animation: zsv-hint-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  transition: opacity 0.5s ease;
+}
+html.light #zenzo-hint { background: rgba(255, 255, 255, 0.92); }
+#zenzo-hint.fade-out { opacity: 0; }
+
+/* --------------------------------------------------------------------------
+   Zenzo toggle button (fixed on landing, static in navbar__right on sub-pages)
+   -------------------------------------------------------------------------- */
+.zenzo-toggle,
+#zenzo-btn.theme-toggle {
+  font-size: 0; /* hide any stray text */
+}
+
+/* Landing page: positioned left of theme toggle */
+body.landing-body #zenzo-btn {
+  position: fixed;
+  top: 16px;
+  right: 60px; /* 16px + 36px + 8px */
+  z-index: 100;
+}
+
+#zenzo-btn[aria-pressed="false"] {
+  opacity: 0.4;
+}
+
+/* --------------------------------------------------------------------------
+   Keyframe animations
+   -------------------------------------------------------------------------- */
+
+/* Breathing */
+@keyframes zsv-breathe {
+  0%, 100% { transform: scale(1);    }
+  50%      { transform: scale(1.03); }
+}
+
+/* Chest core pulse */
+@keyframes zsv-core-pulse {
+  0%, 100% { transform: scale(1);    opacity: 0.78; }
+  50%      { transform: scale(1.28); opacity: 1;    }
+}
+
+/* Antenna sway */
+@keyframes zsv-antenna-sway {
+  0%, 100% { transform: rotate(0deg);  }
+  25%      { transform: rotate(4deg);  }
+  75%      { transform: rotate(-4deg); }
+}
+
+/* Antenna ball brightness */
+@keyframes zsv-ball-glow {
+  0%, 100% { transform: scale(1);    opacity: 0.88; }
+  50%      { transform: scale(1.22); opacity: 1;    }
+}
+
+/* Antenna outer glow ring */
+@keyframes zsv-ball-glow-ring {
+  0%, 100% { opacity: 0.2;  }
+  50%      { opacity: 0.55; }
+}
+
+/* Sparkle twinkle */
+@keyframes zsv-sparkle-twinkle {
+  0%, 40%, 100% { opacity: 0;   transform: scale(0.3) rotate(0deg);  }
+  20%           { opacity: 0.9; transform: scale(1)   rotate(20deg); }
+  60%           { opacity: 0.4; transform: scale(0.6) rotate(35deg); }
+}
+
+/* Eye blink */
+@keyframes zsv-blink-anim {
+  0%, 91%, 100% { opacity: 0; }
+  93%, 98%      { opacity: 1; }
+}
+
+/* Walking leg swing — Phase A (front-left + back-right) */
+@keyframes zsv-leg-a {
+  0%, 100% { transform: rotate(26deg);  }
+  50%      { transform: rotate(-26deg); }
+}
+
+/* Walking leg swing — Phase B (front-right + back-left) */
+@keyframes zsv-leg-b {
+  0%, 100% { transform: rotate(-26deg); }
+  50%      { transform: rotate(26deg);  }
+}
+
+/* Head side-to-side during walk */
+@keyframes zsv-head-bob {
+  0%, 100% { transform: rotate(2deg);  }
+  50%      { transform: rotate(-2deg); }
+}
+
+/* Tail wag while walking */
+@keyframes zsv-tail-wag {
+  0%, 100% { transform: rotate(14deg);  }
+  50%      { transform: rotate(-10deg); }
+}
+
+/* Whole-character vertical bob during walk */
+@keyframes zsv-walk-bob {
+  0%, 100% { transform: translateY(0);    }
+  50%      { transform: translateY(-4px); }
+}
+
+/* Happy jump */
+@keyframes zsv-happy-jump {
+  0%   { transform: translateY(0);     }
+  35%  { transform: translateY(-20px); }
+  65%  { transform: translateY(-10px); }
+  100% { transform: translateY(0);     }
+}
+
+/* Ear flap left */
+@keyframes zsv-ear-flap-l {
+  0%   { transform: rotate(0deg);   }
+  35%  { transform: rotate(-28deg); }
+  100% { transform: rotate(0deg);   }
+}
+
+/* Ear flap right */
+@keyframes zsv-ear-flap-r {
+  0%   { transform: rotate(0deg);  }
+  35%  { transform: rotate(28deg); }
+  100% { transform: rotate(0deg);  }
+}
+
+/* Sleep breathing (slower, deeper) */
+@keyframes zsv-sleep-breathe {
+  0%, 100% { transform: scale(1);    }
+  50%      { transform: scale(1.04); }
+}
+
+/* Head droops when sleeping */
+@keyframes zsv-sleep-tilt {
+  to { transform: rotate(8deg); }
+}
+
+/* Dangling legs when picked up (front) */
+@keyframes zsv-legs-dangle-front {
+  0%, 100% { transform: rotate(14deg);  }
+  50%      { transform: rotate(-8deg);  }
+}
+
+/* Dangling legs when picked up (back — slight offset) */
+@keyframes zsv-legs-dangle-back {
+  0%, 100% { transform: rotate(-6deg);  }
+  50%      { transform: rotate(14deg);  }
+}
+
+/* Landing squash on perch */
+@keyframes zsv-land-squash {
+  0%   { transform: scaleY(1)    scaleX(1);    }
+  25%  { transform: scaleY(0.78) scaleX(1.18); }
+  60%  { transform: scaleY(1.1)  scaleX(0.94); }
+  100% { transform: scaleY(1)    scaleX(1);    }
+}
+
+/* Food bowl appear */
+@keyframes zsv-food-appear {
+  from { transform: scale(0) translateY(8px); opacity: 0; }
+  to   { transform: scale(1) translateY(0);   opacity: 1; }
+}
+
+/* Menu entrance */
+@keyframes zsv-menu-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.88); }
+  to   { opacity: 1; transform: translateY(0)   scale(1);    }
+}
+
+/* Hint entrance */
+@keyframes zsv-hint-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0);   }
+}
+
+/* Heart particle */
+@keyframes zenzo-heart {
+  0%   { transform: translate(-50%, 0)     scale(0.4); opacity: 1;   }
+  60%  { transform: translate(-50%, -36px) scale(1.1); opacity: 1;   }
+  100% { transform: translate(-50%, -56px) scale(0.8); opacity: 0;   }
+}
+
+/* Sparkle particle */
+@keyframes zenzo-sparkle {
+  0%   { transform: translate(-50%, 0)     scale(0.3) rotate(0deg);   opacity: 1; }
+  100% { transform: translate(-50%, -44px) scale(1)   rotate(60deg);  opacity: 0; }
+}
+
+/* Sleeping Z */
+@keyframes zenzo-sleep-z {
+  0%   { transform: translate(0, 0)     scale(0.6); opacity: 0.9; }
+  100% { transform: translate(14px, -48px) scale(1.3); opacity: 0; }
+}
+
+/* Walking dust sparkle — small puff that fades behind feet */
+@keyframes zenzo-walk-dust {
+  0%   { transform: translate(0, 0)   scale(0.4) rotate(0deg);   opacity: 0.7; }
+  60%  { transform: translate(0, 4px) scale(1)   rotate(60deg);  opacity: 0.5; }
+  100% { transform: translate(0, 8px) scale(0.3) rotate(120deg); opacity: 0;   }
+}
+
+/* --------------------------------------------------------------------------
+   EATING state — head bob toward bowl
+   -------------------------------------------------------------------------- */
+#zenzo.zenzo--eating .zsv-head {
+  animation: zsv-eat-bob 0.45s ease-in-out infinite;
+}
+@keyframes zsv-eat-bob {
+  0%, 100% { transform: rotate(0deg)  translateY(0);    }
+  50%      { transform: rotate(8deg)  translateY(3px);  }
+}
+
+/* --------------------------------------------------------------------------
+   Reduced motion — disable all non-essential motion
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .zsv-body,
+  .zsv-core,
+  .zsv-antenna,
+  .zsv-antenna-ball,
+  .zsv-antenna-glow-ring,
+  .zsv-sparkle-1,
+  .zsv-sparkle-2        { animation: none !important; }
+
+  #zenzo.zenzo--walking { animation: none !important; }
+
+  #zenzo.zenzo--walking .zsv-leg-fl,
+  #zenzo.zenzo--walking .zsv-leg-fr,
+  #zenzo.zenzo--walking .zsv-leg-bl,
+  #zenzo.zenzo--walking .zsv-leg-br,
+  #zenzo.zenzo--walking .zsv-head,
+  #zenzo.zenzo--walking .zsv-tail  { animation: none !important; }
+}
+
+/* --------------------------------------------------------------------------
+   Mobile sizing
+   -------------------------------------------------------------------------- */
+@media (max-width: 640px) {
+  #zenzo { width: 60px; height: 60px; }
+}
+
+/* --------------------------------------------------------------------------
+   Chat bubble — speech bubble that floats above Zenzo
+   -------------------------------------------------------------------------- */
+.zenzo-bubble {
+  position: fixed;
+  background: rgba(14, 14, 14, 0.92);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #f0f0f0;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.35;
+  padding: 7px 13px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.08);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 92;
+  transform: translate(-50%, -100%);
+  transform-origin: 50% 100%;
+  animation: zenzo-bubble-in 0.28s cubic-bezier(0.16,1,0.3,1) both;
+}
+
+/* Triangle tail pointing down toward Zenzo's head */
+.zenzo-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 7px solid rgba(14,14,14,0.92);
+}
+
+.zenzo-bubble--hide {
+  animation: zenzo-bubble-out 0.35s ease forwards !important;
+}
+
+html.light .zenzo-bubble {
+  background: rgba(255,255,255,0.96);
+  color: #111;
+  border-color: rgba(0,0,0,0.1);
+}
+html.light .zenzo-bubble::after {
+  border-top-color: rgba(255,255,255,0.96);
+}
+
+/* --------------------------------------------------------------------------
+   Double-click ripple — teal ring expands at call point
+   -------------------------------------------------------------------------- */
+.zenzo-call-ripple {
+  position: fixed;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--color-accent, #008080);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 93;
+  transform: translate(-50%, -50%) scale(0);
+  animation: zenzo-call-ripple 0.65s cubic-bezier(0.16,1,0.3,1) forwards;
+}
+
+/* --------------------------------------------------------------------------
+   Chat bubble + ripple keyframes
+   -------------------------------------------------------------------------- */
+@keyframes zenzo-bubble-in {
+  from { opacity: 0; transform: translate(-50%, calc(-100% + 12px)) scale(0.82); }
+  to   { opacity: 1; transform: translate(-50%, -100%) scale(1); }
+}
+
+@keyframes zenzo-bubble-out {
+  to { opacity: 0; transform: translate(-50%, calc(-100% - 8px)) scale(0.9); }
+}
+
+@keyframes zenzo-call-ripple {
+  to { transform: translate(-50%, -50%) scale(4); opacity: 0; }
+}

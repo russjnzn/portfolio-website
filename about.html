@@ -37,6 +37,9 @@
 
   <!-- Page CSS -->
   <link rel="stylesheet" href="css/pages/about.css" />
+
+  <!-- Zenzo companion -->
+  <link rel="stylesheet" href="css/zenzo.css" />
 </head>
 <body class="about-page">
 
@@ -55,15 +58,20 @@
       </ul>
 
       <div class="navbar__right">
+        <button id="zenzo-btn" class="theme-toggle" aria-label="Toggle Zenzo companion" aria-pressed="true" title="Hide Zenzo">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="8" width="18" height="13" rx="4"/>
+            <circle cx="9"  cy="14" r="1.5" fill="currentColor" stroke="none"/>
+            <circle cx="15" cy="14" r="1.5" fill="currentColor" stroke="none"/>
+            <path d="M9 18h6"/>
+            <line x1="12" y1="2" x2="12" y2="8"/>
+            <circle cx="12" cy="2" r="1.5" fill="currentColor" stroke="none"/>
+          </svg>
+        </button>
         <button id="theme-btn" class="theme-toggle" aria-label="Toggle color theme" data-theme-icon></button>
         <button id="hamburger-btn" class="navbar__hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-menu">
           <span></span><span></span><span></span>
         </button>
-        <!-- <a href="index.html" class="navbar__close" aria-label="Return to home">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-            <path d="M18 6 6 18M6 6l12 12"/>
-          </svg>
-        </a> -->
       </div>
     </nav>
 
@@ -409,6 +417,7 @@
   </main>
 
   <!-- Page scripts -->
+  <script src="js/zenzo.js" defer></script>
   <script src="js/animations.js" defer></script>
   <script src="js/pages/about.js" defer></script>
 
