@@ -18,9 +18,9 @@
 window.ZenzoManager = (function () {
 
   // ── Constants ─────────────────────────────────────────────────────────────
-  var W = 82;            // character width  (px) — matches CSS
-  var H = 82;            // character height (px)
-  var FOOT = H * 0.94;   // distance from top to feet (SVG legs end at ~97% height)
+  var W = 80;            // character width  (px) — 2.5x the 32px sprite grid, matches CSS
+  var H = 80;            // character height (px)
+  var FOOT = H * 0.94;   // distance from top to feet (sprite feet end at row 30/32)
   var WALK_SPEED = 88;   // px / second
   var IDLE_MIN = 3500;   // ms before a new wander target is chosen
   var IDLE_MAX = 9000;
@@ -95,6 +95,7 @@ window.ZenzoManager = (function () {
     x: 0, y: 0,
     facing: 'right',
     mode: 'idle',        // idle | walking | sleeping | dragging | perched | eating
+    speed: 0,            // current trot speed (px/s, eased)
     targetX: 0, targetY: 0,
     perchedEl: null,
     stats: { hunger: 25, happiness: 85, energy: 100 },
@@ -105,6 +106,7 @@ window.ZenzoManager = (function () {
 
   // ── DOM refs ──────────────────────────────────────────────────────────────
   var worldEl, charEl, menuEl, toysEl;
+  var rig = null; // SVG bone group refs, filled by initRig()
   var rafId, lastTs;
   var perchedObserver = null, scrollCb = null;
   var entryTimerId = null, hasEntered = false;
@@ -129,129 +131,165 @@ window.ZenzoManager = (function () {
     charEl.setAttribute('role', 'button');
     charEl.setAttribute('aria-label', 'Zenzo, your portfolio companion. Press Space to pet, F to feed, P to play, S to sleep.');
 
-    // Inline SVG — every body part is a separate CSS-animated element.
-    // Render order (SVG painter's model): tail → back legs → body →
-    // front legs → head group → antenna (topmost).
+    // Inline SVG — retro pixel-art sprite (Pokémon GBA style). Drawn on a
+    // 32x32 logical pixel grid: every coordinate is an integer, fills are
+    // flat palette colors with a dark outline, shape-rendering crispEdges
+    // keeps edges hard when scaled up 3x. Every zr-* group is a rig bone
+    // driven from JS (updateRig) at a stepped 12fps with quantized angles
+    // so motion reads as hand-drawn animation frames; zsv-* elements keep
+    // CSS-only opacity effects (glow pulses, blink, sparkles).
+    // Render order (painter's model): tail → hind legs → body →
+    // front legs → head group (ears behind head, antenna on top).
+    //
+    // Palette: outline #222034 · white #ffffff · light #dbe3ee ·
+    //          mid #aebccd · visor #10141f (+hi #2c3a52) ·
+    //          cyan #3ee6e6 (lt #b8fbfb, dk #1ba8b4) · blush #ff9aa8
     var svg = [
-      '<svg class="zenzo__svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">',
+      '<svg class="zenzo__svg" viewBox="0 0 32 32" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">',
 
-      // ── TAIL (behind everything) — long curling sweep ──────────────────
-      '<g class="zsv-tail">',
-        '<path d="M 68 70 C 90 65 100 48 90 36 C 84 28 74 32 74 41 C 74 46 80 47 81 42"',
-              ' fill="none" stroke="white" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>',
-        '<path d="M 68 70 C 90 65 100 48 90 36 C 84 28 74 32 74 41 C 74 46 80 47 81 42"',
-              ' fill="none" stroke="#ececec" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>',
-      '</g>',
+      // zr-flip mirrors the whole sprite when facing left (instant, retro)
+      '<g class="zr-flip">',
+      // zr-rig carries whole-body hop + lean
+      '<g class="zr-rig">',
 
-      // ── BACK LEGS (behind body) — small rounded nubs ───────────────────
-      '<g class="zsv-leg-bl">',
-        '<ellipse cx="29" cy="86" rx="7.5" ry="9" fill="#d8d8d8"/>',
-      '</g>',
-      '<g class="zsv-leg-br">',
-        '<ellipse cx="71" cy="86" rx="7.5" ry="9" fill="#d8d8d8"/>',
+      // ── TAIL — one connected stepped plume curving up-right ────────────
+      '<g class="zr-tail">',
+        '<path d="M24 22 L24 17 L25 17 L25 15 L26 15 L26 13 L27 13 L27 11 L31 11 L31 16 L30 16 L30 18 L29 18 L29 20 L28 20 L28 22 Z" fill="#222034"/>',
+        '<path d="M25 21 L25 17 L26 17 L26 15 L27 15 L27 13 L28 13 L28 12 L30 12 L30 15 L29 15 L29 17 L28 17 L28 19 L27 19 L27 21 Z" fill="#dbe3ee"/>',
+        '<rect x="28" y="12" width="1" height="2" fill="#ffffff"/>',
       '</g>',
 
-      // ── BODY — round, with multi-layer chest glow ─────────────────────
-      '<g class="zsv-body">',
-        // soft outer body glow
-        '<ellipse cx="50" cy="68" rx="24" ry="18" fill="#00cccc" opacity="0.06"/>',
-        // main torso
-        '<ellipse cx="50" cy="68" rx="22" ry="17" fill="white"/>',
-        // top highlight
-        '<ellipse cx="46" cy="61" rx="11" ry="6.5" fill="rgba(255,255,255,0.55)"/>',
-        // chest core — multi-layer glow
-        '<circle cx="50" cy="69" r="13" fill="#00dada" opacity="0.12"/>',
-        '<circle cx="50" cy="69" r="9"  fill="#00dada" opacity="0.22"/>',
-        '<circle class="zsv-core" cx="50" cy="69" r="5.5" fill="#5becec"/>',
-        // bright inner spot
-        '<circle cx="49" cy="68" r="2.2" fill="#d0f5f5" opacity="0.95"/>',
+      // ── HIND LEGS (behind body, shaded for depth) — thicker rect, curved foot end ──
+      '<g class="zr-leg-bl">',
+        '<path d="M3 23 L9 23 L9 29 L8 29 L8 30 L4 30 L4 29 L3 29 Z" fill="#222034"/>',
+        '<rect x="4" y="24" width="4" height="4" fill="#aebccd"/>',
+        '<rect x="5" y="29" width="2" height="1" fill="#8da2b5"/>',
+      '</g>',
+      '<g class="zr-leg-br">',
+        '<path d="M29 23 L23 23 L23 29 L24 29 L24 30 L28 30 L28 29 L29 29 Z" fill="#222034"/>',
+        '<rect x="24" y="24" width="4" height="4" fill="#aebccd"/>',
+        '<rect x="25" y="29" width="2" height="1" fill="#8da2b5"/>',
       '</g>',
 
-      // ── FRONT LEGS (in front of body) — rounded nubs, slightly larger ──
-      '<g class="zsv-leg-fl">',
-        '<ellipse cx="38" cy="89" rx="8.5" ry="10" fill="white"/>',
-        // teal cuff accent on front-left leg
-        '<ellipse cx="38" cy="89" rx="8.5" ry="2.5" fill="rgba(0,210,210,0.45)"/>',
+      // ── BODY — stepped rounded blob with glowing chest core ────────────
+      '<g class="zr-body">',
+        '<path d="M10 15 L22 15 L22 16 L24 16 L24 18 L25 18 L25 24 L24 24 L24 26 L22 26 L22 27 L10 27 L10 26 L8 26 L8 24 L7 24 L7 18 L8 18 L8 16 L10 16 Z" fill="#222034"/>',
+        '<rect x="10" y="16" width="12" height="1" fill="#ffffff"/>',
+        '<rect x="9"  y="17" width="14" height="1" fill="#ffffff"/>',
+        '<rect x="8"  y="18" width="16" height="6" fill="#ffffff"/>',
+        '<rect x="9"  y="24" width="14" height="1" fill="#dbe3ee"/>',
+        '<rect x="10" y="25" width="12" height="1" fill="#dbe3ee"/>',
+        // chest core — square halo + outlined pixel core
+        '<rect class="zsv-core-halo" x="12" y="16" width="8" height="8" fill="#3ee6e6" opacity="0.15"/>',
+        '<rect x="13" y="17" width="6" height="6" fill="#222034"/>',
+        '<rect class="zsv-core" x="14" y="18" width="4" height="4" fill="#3ee6e6"/>',
+        '<rect x="14" y="18" width="2" height="1" fill="#b8fbfb"/>',
+        '<rect x="14" y="19" width="1" height="1" fill="#b8fbfb"/>',
+        '<rect x="14" y="21" width="4" height="1" fill="#1ba8b4"/>',
       '</g>',
-      '<g class="zsv-leg-fr">',
-        '<ellipse cx="62" cy="89" rx="8.5" ry="10" fill="white"/>',
+
+      // ── FRONT LEGS — thicker rect with curved foot end (mirrors hind leg shape) ─
+      '<g class="zr-leg-fl">',
+        '<path d="M9 23 L15 23 L15 29 L14 29 L14 30 L10 30 L10 29 L9 29 Z" fill="#222034"/>',
+        '<rect x="10" y="24" width="4" height="4" fill="#ffffff"/>',
+        '<rect x="11" y="29" width="2" height="1" fill="#dbe3ee"/>',
+      '</g>',
+      '<g class="zr-leg-fr">',
+        '<path d="M23 23 L17 23 L17 29 L18 29 L18 30 L22 30 L22 29 L23 29 Z" fill="#222034"/>',
+        '<rect x="18" y="24" width="4" height="4" fill="#ffffff"/>',
+        '<rect x="19" y="29" width="2" height="1" fill="#dbe3ee"/>',
       '</g>',
 
       // ── HEAD GROUP ─────────────────────────────────────────────────────
-      '<g class="zsv-head">',
+      '<g class="zr-head">',
 
-        // LEFT EAR — teardrop, droopy
-        '<g class="zsv-ear-l">',
-          '<path d="M 28 24 Q 12 28 14 50 Q 18 56 23 51 Q 28 41 30 30 Z" fill="white"/>',
-          // ear inner shadow
-          '<path d="M 24 30 Q 18 38 19 47" fill="none" stroke="#e8e8e8" stroke-width="1.5" opacity="0.6" stroke-linecap="round"/>',
+        // EARS — droopy stepped flaps tucked behind the head
+        '<g class="zr-ear-l">',
+          '<path d="M4 5 L7 5 L7 6 L8 6 L8 13 L7 13 L7 14 L4 14 L4 13 L2 13 L2 11 L1 11 L1 8 L2 8 L2 6 L4 6 Z" fill="#222034"/>',
+          '<rect x="3" y="6" width="4" height="7" fill="#dbe3ee"/>',
+          '<rect x="2" y="8" width="1" height="3" fill="#dbe3ee"/>',
+          '<rect x="2" y="10" width="2" height="3" fill="#aebccd"/>',
+        '</g>',
+        '<g class="zr-ear-r">',
+          '<path d="M28 5 L25 5 L25 6 L24 6 L24 13 L25 13 L25 14 L28 14 L28 13 L30 13 L30 11 L31 11 L31 8 L30 8 L30 6 L28 6 Z" fill="#222034"/>',
+          '<rect x="25" y="6" width="4" height="7" fill="#dbe3ee"/>',
+          '<rect x="29" y="8" width="1" height="3" fill="#dbe3ee"/>',
+          '<rect x="28" y="10" width="2" height="3" fill="#aebccd"/>',
         '</g>',
 
-        // RIGHT EAR — teardrop, droopy
-        '<g class="zsv-ear-r">',
-          '<path d="M 72 24 Q 88 28 86 50 Q 82 56 77 51 Q 72 41 70 30 Z" fill="white"/>',
-          '<path d="M 76 30 Q 82 38 81 47" fill="none" stroke="#e8e8e8" stroke-width="1.5" opacity="0.6" stroke-linecap="round"/>',
-        '</g>',
+        // HEAD — big stepped rounded square
+        '<path d="M8 3 L24 3 L24 4 L26 4 L26 6 L27 6 L27 14 L26 14 L26 16 L24 16 L24 17 L8 17 L8 16 L6 16 L6 14 L5 14 L5 6 L6 6 L6 4 L8 4 Z" fill="#222034"/>',
+        '<rect x="8" y="4"  width="16" height="1" fill="#ffffff"/>',
+        '<rect x="7" y="5"  width="18" height="1" fill="#ffffff"/>',
+        '<rect x="6" y="6"  width="20" height="8" fill="#ffffff"/>',
+        '<rect x="7" y="14" width="18" height="1" fill="#ffffff"/>',
+        '<rect x="8" y="15" width="16" height="1" fill="#dbe3ee"/>',
 
-        // HEAD SHAPE — slightly oval bubble helmet
-        '<ellipse cx="50" cy="36" rx="25.5" ry="24" fill="white"/>',
-        // soft top highlight
-        '<ellipse cx="42" cy="26" rx="11" ry="7.5" fill="rgba(255,255,255,0.45)"/>',
+        // VISOR — dark stepped face screen with pixel gleam
+        '<path d="M10 6 L22 6 L22 7 L23 7 L23 8 L24 8 L24 12 L23 12 L23 13 L22 13 L22 14 L10 14 L10 13 L9 13 L9 12 L8 12 L8 8 L9 8 L9 7 L10 7 Z" fill="#222034"/>',
+        '<rect x="10" y="7" width="12" height="6" fill="#10141f"/>',
+        '<rect x="9"  y="8" width="14" height="4" fill="#10141f"/>',
+        '<rect x="10" y="7" width="3" height="1" fill="#2c3a52"/>',
+        '<rect x="10" y="8" width="1" height="1" fill="#2c3a52"/>',
 
-        // VISOR — rounded RECTANGLE (matches reference exactly)
-        '<rect class="zsv-visor" x="30" y="22" width="40" height="28" rx="12" fill="#0a0a0a"/>',
-        // visor specular highlight (top-left gleam)
-        '<ellipse cx="38" cy="28" rx="7" ry="3.5" fill="rgba(255,255,255,0.12)" transform="rotate(-15,38,28)"/>',
-        '<ellipse cx="38" cy="28" rx="3" ry="1.6" fill="rgba(255,255,255,0.35)" transform="rotate(-15,38,28)"/>',
-
-        // EYES — happy crescents with cyan glow halos
+        // EYES — chunky happy pixel crescents
         '<g class="zsv-eyes">',
-          // soft glow halos behind eyes
-          '<ellipse cx="41" cy="34" rx="6.5" ry="3.5" fill="#5becec" opacity="0.2"/>',
-          '<ellipse cx="59" cy="34" rx="6.5" ry="3.5" fill="#5becec" opacity="0.2"/>',
-          // upper crescent arcs (smile shape)
-          '<path d="M 36 34 Q 41 27 46 34" fill="none" stroke="#5becec" stroke-width="3.5" stroke-linecap="round"/>',
-          '<path d="M 54 34 Q 59 27 64 34" fill="none" stroke="#5becec" stroke-width="3.5" stroke-linecap="round"/>',
-          // bright inner glow on each eye
-          '<path d="M 38 33 Q 41 30 44 33" fill="none" stroke="#d0f5f5" stroke-width="1.2" stroke-linecap="round" opacity="0.85"/>',
-          '<path d="M 56 33 Q 59 30 62 33" fill="none" stroke="#d0f5f5" stroke-width="1.2" stroke-linecap="round" opacity="0.85"/>',
+          '<rect x="11" y="9" width="1" height="2" fill="#3ee6e6"/>',
+          '<rect x="12" y="8" width="1" height="2" fill="#3ee6e6"/>',
+          '<rect x="13" y="8" width="1" height="2" fill="#3ee6e6"/>',
+          '<rect x="14" y="9" width="1" height="2" fill="#3ee6e6"/>',
+          '<rect x="12" y="8" width="2" height="1" fill="#b8fbfb"/>',
+          '<rect x="18" y="9" width="1" height="2" fill="#3ee6e6"/>',
+          '<rect x="19" y="8" width="1" height="2" fill="#3ee6e6"/>',
+          '<rect x="20" y="8" width="1" height="2" fill="#3ee6e6"/>',
+          '<rect x="21" y="9" width="1" height="2" fill="#3ee6e6"/>',
+          '<rect x="19" y="8" width="2" height="1" fill="#b8fbfb"/>',
         '</g>',
 
-        // BLINK COVER — opacity=0 normally, animates during blink
+        // SAD EYES — shown via .zenzo--sad (downturned, dimmer)
+        '<g class="zsv-eyes-sad">',
+          '<rect x="11" y="8" width="1" height="2" fill="#1ba8b4"/>',
+          '<rect x="12" y="9" width="1" height="2" fill="#1ba8b4"/>',
+          '<rect x="13" y="9" width="1" height="2" fill="#1ba8b4"/>',
+          '<rect x="14" y="8" width="1" height="2" fill="#1ba8b4"/>',
+          '<rect x="18" y="8" width="1" height="2" fill="#1ba8b4"/>',
+          '<rect x="19" y="9" width="1" height="2" fill="#1ba8b4"/>',
+          '<rect x="20" y="9" width="1" height="2" fill="#1ba8b4"/>',
+          '<rect x="21" y="8" width="1" height="2" fill="#1ba8b4"/>',
+        '</g>',
+
+        // BLINK COVER — visor-colored lids + closed-eye lines
         '<g class="zsv-blink">',
-          '<rect x="33" y="29" width="15" height="9" rx="4.5" fill="#0a0a0a"/>',
-          '<rect x="52" y="29" width="15" height="9" rx="4.5" fill="#0a0a0a"/>',
+          '<rect x="10" y="8" width="6" height="4" fill="#10141f"/>',
+          '<rect x="17" y="8" width="6" height="4" fill="#10141f"/>',
+          '<rect x="11" y="9" width="4" height="1" fill="#1ba8b4"/>',
+          '<rect x="18" y="9" width="4" height="1" fill="#1ba8b4"/>',
         '</g>',
 
-        // CHEEK BLUSH (subtle rosy spots)
-        '<ellipse cx="32" cy="46" rx="4" ry="2.5" fill="rgba(255,150,150,0.22)"/>',
-        '<ellipse cx="68" cy="46" rx="4" ry="2.5" fill="rgba(255,150,150,0.22)"/>',
+        // CHEEK BLUSH — single pixel pair per cheek
+        '<rect x="7"  y="14" width="2" height="1" fill="#ff9aa8"/>',
+        '<rect x="23" y="14" width="2" height="1" fill="#ff9aa8"/>',
 
-      '</g>',
+        // ── ANTENNA — pixel stem with glowing orb ────────────────────────
+        '<g class="zr-antenna">',
+          '<rect x="16" y="0" width="1" height="4" fill="#222034"/>',
+          '<rect class="zsv-antenna-glow-ring" x="13" y="-5" width="7" height="7" fill="#3ee6e6" opacity="0.18"/>',
+          '<rect x="14" y="-4" width="5" height="5" fill="#222034"/>',
+          '<rect class="zsv-antenna-ball" x="15" y="-3" width="3" height="3" fill="#3ee6e6"/>',
+          '<rect x="15" y="-3" width="1" height="1" fill="#b8fbfb"/>',
+          '<g class="zsv-sparkle-1" transform="translate(9,-1)">',
+            '<rect x="-1" y="0" width="3" height="1" fill="#3ee6e6"/>',
+            '<rect x="0" y="-1" width="1" height="3" fill="#3ee6e6"/>',
+          '</g>',
+          '<g class="zsv-sparkle-2" transform="translate(24,-3)">',
+            '<rect x="-1" y="0" width="3" height="1" fill="#3ee6e6"/>',
+            '<rect x="0" y="-1" width="1" height="3" fill="#3ee6e6"/>',
+          '</g>',
+        '</g>',
 
-      // ── ANTENNA (topmost layer) ────────────────────────────────────────
-      '<g class="zsv-antenna">',
-        // thin stick
-        '<line x1="50" y1="13" x2="55" y2="3" stroke="white" stroke-width="2.5" stroke-linecap="round"/>',
-        // small mid bauble
-        '<circle cx="53" cy="8" r="2.5" fill="white"/>',
-        // outer glow halo (large soft)
-        '<circle class="zsv-antenna-glow-ring" cx="56" cy="2" r="9" fill="#5becec" opacity="0.25"/>',
-        // mid glow
-        '<circle cx="56" cy="2" r="6.5" fill="#5becec" opacity="0.4"/>',
-        // glowing orb
-        '<circle class="zsv-antenna-ball" cx="56" cy="2" r="4.5" fill="#5becec"/>',
-        // bright inner spot
-        '<circle cx="55" cy="1" r="1.6" fill="#d0f5f5"/>',
-        // sparkle 1 (left)
-        '<g class="zsv-sparkle-1" transform="translate(38,8)">',
-          '<path d="M0,-4 L.85,-.85 L4,0 L.85,.85 L0,4 L-.85,.85 L-4,0 L-.85,-.85 Z" fill="#5becec" opacity="0.9"/>',
-        '</g>',
-        // sparkle 2 (right)
-        '<g class="zsv-sparkle-2" transform="translate(70,5)">',
-          '<path d="M0,-3 L.6,-.6 L3,0 L.6,.6 L0,3 L-.6,.6 L-3,0 L-.6,-.6 Z" fill="#5becec" opacity="0.7"/>',
-        '</g>',
-      '</g>',
+      '</g>',   // /zr-head
+      '</g>',   // /zr-rig
+      '</g>',   // /zr-flip
 
       '</svg>',
     ].join('');
@@ -274,6 +312,187 @@ window.ZenzoManager = (function () {
     document.body.appendChild(worldEl);
   }
 
+  // ── Procedural animation rig ──────────────────────────────────────────────
+  // Drives every body part from the RAF loop like a retro game sprite:
+  // simulation is continuous (springs, stride synced to ground speed) but
+  // everything is QUANTIZED on output — the rig steps at ~12fps, angles snap
+  // to coarse increments and translations snap to whole sprite pixels, so
+  // motion reads as hand-drawn animation frames (Pokémon overworld style).
+  var FPS_STEP = 1 / 12;           // rig updates ~12 times per second
+  var anim = {
+    t: Math.random() * 10,         // local clock (randomized so two tabs desync)
+    acc: 0,                        // frame-step accumulator
+    phase: 0,                      // walk-cycle phase (radians)
+    prevX: 0, prevY: 0, hasPrev: false,
+    vx: 0, vy: 0,                  // smoothed real velocity (px/s)
+    bob: 0, bobV: 0,               // vertical gait hop (sprite px)
+    lean: 0,                       // whole-body tilt (deg, local space)
+    sit: 1,                        // 0 = standing, 1 = sitting (snapped binary)
+    headRot: 0,
+    earL: { a: 0, v: 0 },
+    earR: { a: 0, v: 0 },
+    ant:  { a: 0, v: 0 },
+    wagPh: 0, wagAmp: 6, wagFreq: 3.5,
+    legA: 0, legB: 0,              // diagonal leg pair angles
+  };
+
+  function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
+
+  // Damped spring integrator: pulls s.a toward target, overshoots naturally
+  function springStep(s, target, k, c, dt) {
+    s.v += ((target - s.a) * k - s.v * c) * dt;
+    s.a += s.v * dt;
+  }
+
+  function setT(el, t) { el.setAttribute('transform', t); }
+
+  function initRig() {
+    function q(sel) { return charEl.querySelector(sel); }
+    rig = {
+      flip:  q('.zr-flip'),  root:  q('.zr-rig'),
+      body:  q('.zr-body'),  head:  q('.zr-head'),
+      earL:  q('.zr-ear-l'), earR:  q('.zr-ear-r'),
+      tail:  q('.zr-tail'),  ant:   q('.zr-antenna'),
+      legFL: q('.zr-leg-fl'), legFR: q('.zr-leg-fr'),
+      legBL: q('.zr-leg-bl'), legBR: q('.zr-leg-br'),
+    };
+  }
+
+  // Impulses other systems can fire (pet, landing) so floppy parts react
+  function kickRig(strength) {
+    anim.earL.v += 220 * strength;
+    anim.earR.v -= 200 * strength;
+    anim.ant.v  += 260 * strength;
+    anim.wagAmp  = Math.max(anim.wagAmp, 24 * strength);
+    anim.wagFreq = Math.max(anim.wagFreq, 12 * strength);
+  }
+
+  // Quantizers — the secret to the retro feel: coarse angle steps and whole
+  // sprite pixels make continuous simulation read as discrete frames
+  function qa(deg, step) { return Math.round(deg / step) * step; }
+  function qp(px)        { return Math.round(px); }
+
+  function updateRig(dtIn) {
+    if (!rig) return;
+    var a = anim;
+
+    if (st.reducedMotion) {
+      // Static sitting pose, facing flip only — no motion
+      setT(rig.flip, 'translate(16 0) scale(' + (st.facing === 'left' ? -1 : 1) + ' 1) translate(-16 0)');
+      return;
+    }
+
+    // Step the rig at ~12fps — like flipping sprite frames
+    a.acc += dtIn;
+    if (a.acc < FPS_STEP) return;
+    var dt = clamp(a.acc, 0.02, 0.15);
+    a.acc = 0;
+    a.t += dt;
+
+    // --- real velocity from position delta (covers walking AND dragging) ---
+    if (!a.hasPrev) { a.prevX = st.x; a.prevY = st.y; a.hasPrev = true; }
+    var sm = Math.min(1, dt * 14);
+    a.vx += ((st.x - a.prevX) / dt - a.vx) * sm;
+    a.vy += ((st.y - a.prevY) / dt - a.vy) * sm;
+    a.prevX = st.x; a.prevY = st.y;
+    var spd = Math.min(Math.hypot(a.vx, a.vy), 600);
+
+    var dragging = st.mode === 'dragging';
+    var sleeping = st.mode === 'sleeping';
+    var moving   = spd > 6 && !dragging;
+    var eating   = charEl.classList.contains('zenzo--eating');
+
+    // --- facing: instant sprite mirror, no tween (retro sprites just flip) ---
+    var flip = st.facing === 'left' ? -1 : 1;
+
+    // --- gait: stride phase advances with distance traveled ---
+    if (moving) a.phase += spd * dt / 11;
+    var stride = Math.sin(a.phase);
+
+    // body hop: two footfalls per stride cycle (in sprite pixels)
+    var prevBob = a.bob;
+    var bobTarget = moving ? -Math.abs(stride) * 1.4 : 0;
+    a.bob += (bobTarget - a.bob) * Math.min(1, dt * 18);
+    var bobV = (a.bob - prevBob) / dt;
+    var bobKick = clamp((bobV - a.bobV) * 0.14, -40, 40);
+    a.bobV = bobV;
+
+    // --- pose: snap between standing and sitting frames (binary, retro) ---
+    var sitT = (!moving && !dragging &&
+                (st.mode === 'idle' || sleeping || st.mode === 'perched')) ? 1 : 0;
+    a.sit += (sitT - a.sit) * Math.min(1, dt * (sitT ? 3.5 : 9));
+    var sit = a.sit > 0.5 ? 1 : 0;
+
+    // --- lean: tip forward while trotting, sway from inertia while carried ---
+    var leanT = 0;
+    if (dragging)    leanT = flip * clamp(-a.vx * 0.045, -14, 14);
+    else if (moving) leanT = clamp(spd * 0.05, 0, 6);
+    a.lean += (leanT - a.lean) * Math.min(1, dt * 7);
+
+    // --- idle breathing: classic 1px sprite bounce, half the cycle down ---
+    var breathe = Math.sin(a.t * (sleeping ? 1.4 : 2.0)) > 0 ? 0 : 1;
+
+    // --- floppy ears + antenna: springs kicked by every gait hop ---
+    a.earL.v += bobKick * 1.15;
+    a.earR.v += bobKick;
+    a.ant.v  -= bobKick * 0.8;
+    springStep(a.earL, a.lean * -0.7, 80, 7.5, dt);
+    springStep(a.earR, a.lean * -0.7, 95, 8.5, dt);
+    springStep(a.ant,  a.lean * -1.1, 60, 6.5, dt);
+
+    // --- tail wag: amplitude/frequency follow mood and motion ---
+    var happy    = st.stats.happiness > 70;
+    var wagAmpT  = sleeping ? 1.5 : dragging ? 4 : moving ? 16 : (happy ? 11 : 6);
+    var wagFreqT = moving ? 10 : (happy ? 6 : 3.2);
+    a.wagAmp  += (wagAmpT  - a.wagAmp)  * Math.min(1, dt * 3);
+    a.wagFreq += (wagFreqT - a.wagFreq) * Math.min(1, dt * 3);
+    a.wagPh   += a.wagFreq * dt;
+    var tailRot = Math.sin(a.wagPh) * a.wagAmp - sit * 6;
+
+    // --- legs: diagonal pairs while trotting, loose dangle while carried ---
+    var legTargetA, legTargetB;
+    if (dragging) {
+      var dangle = Math.sin(a.t * 3.2) * 6 - a.lean * 0.5;
+      legTargetA = 9 + dangle;
+      legTargetB = 3 - dangle;
+    } else {
+      var legAmp = 24 * clamp(spd / 75, 0, 1);
+      legTargetA = stride * legAmp;
+      legTargetB = -stride * legAmp;
+    }
+    a.legA += (legTargetA - a.legA) * Math.min(1, dt * 16);
+    a.legB += (legTargetB - a.legB) * Math.min(1, dt * 16);
+
+    // --- head: counter-tilts the lean, nods with stride, droops asleep ---
+    var headRotT = -a.lean * 0.5 +
+                   (moving ? Math.sin(a.phase) * 1.6 : Math.sin(a.t * 0.9) * 1.2);
+    if (sleeping) headRotT = 11;
+    if (eating)   headRotT = 9 + Math.sin(a.t * 9) * 5;
+    a.headRot += (headRotT - a.headRot) * Math.min(1, dt * 7);
+    var headY = sit * 1 + breathe + (eating ? 1 : 0);
+
+    // --- apply bone transforms (all pivots in 32-grid sprite space,
+    //     angles snapped to coarse steps, translations to whole pixels) ---
+    setT(rig.flip, 'translate(16 0) scale(' + flip + ' 1) translate(-16 0)');
+    setT(rig.root, 'translate(0 ' + qp(a.bob + sit * 0.5) + ')' +
+                   ' rotate(' + qa(a.lean, 3) + ' 16 29)');
+
+    setT(rig.body, 'translate(0 ' + qp(sit * 1 + breathe) + ')');
+
+    setT(rig.head, 'translate(0 ' + qp(headY) + ')' +
+                   ' rotate(' + qa(a.headRot, 3) + ' 16 18)');
+    setT(rig.earL, 'rotate(' + qa(a.earL.a - sit * 2, 5) + ' 6 6)');
+    setT(rig.earR, 'rotate(' + qa(a.earR.a + sit * 2, 5) + ' 26 6)');
+    setT(rig.ant,  'rotate(' + qa(a.ant.a, 5) + ' 16 3)');
+    setT(rig.tail, 'rotate(' + qa(tailRot, 6) + ' 26 20)');
+
+    // sitting: body settles down a pixel and the haunches splay outward
+    setT(rig.legFL, 'rotate(' + qa(a.legA, 8) + ' 12 23)');
+    setT(rig.legFR, 'rotate(' + qa(a.legB, 8) + ' 20 23)');
+    setT(rig.legBL, 'rotate(' + qa(a.legB * 0.85 - 12 * sit, 8) + ' 7 23)');
+    setT(rig.legBR, 'rotate(' + qa(a.legA * 0.85 + 12 * sit, 8) + ' 25 23)');
+  }
+
   // ── Position helpers ──────────────────────────────────────────────────────
   function clampX(x) { return Math.max(0, Math.min(x, window.innerWidth  - W)); }
   function clampY(y) { return Math.max(0, Math.min(y, window.innerHeight - H)); }
@@ -281,8 +500,10 @@ window.ZenzoManager = (function () {
   function moveTo(x, y) {
     st.x = clampX(x);
     st.y = clampY(y);
-    charEl.style.left = st.x + 'px';
-    charEl.style.top  = st.y + 'px';
+    // Internal position is continuous; rendering snaps to a 2px grid for
+    // chunky retro movement (like tile-stepped overworld sprites)
+    charEl.style.left = (Math.round(st.x / 2) * 2) + 'px';
+    charEl.style.top  = (Math.round(st.y / 2) * 2) + 'px';
     if (!menuEl.hidden) repositionMenu();
   }
 
@@ -292,7 +513,10 @@ window.ZenzoManager = (function () {
     // Keep menu inside viewport
     mx = Math.max(8, Math.min(mx, window.innerWidth - mw - 8));
     menuEl.style.left = mx + 'px';
-    menuEl.style.top  = (st.y - 54) + 'px';
+    var mh = menuEl.offsetHeight || 46;
+    var my = st.y - mh - 8;
+    if (my < 8) my = st.y + FOOT + 10; // no room above → show below
+    menuEl.style.top  = my + 'px';
   }
 
   // ── Facing ────────────────────────────────────────────────────────────────
@@ -309,6 +533,7 @@ window.ZenzoManager = (function () {
       'zenzo--happy', 'zenzo--landing'
     );
     st.mode = mode;
+    if (mode !== 'walking')  st.speed = 0;
     if (mode === 'walking')  charEl.classList.add('zenzo--walking');
     if (mode === 'sleeping') charEl.classList.add('zenzo--sleeping');
     if (mode === 'dragging') charEl.classList.add('zenzo--dragging');
@@ -329,11 +554,15 @@ window.ZenzoManager = (function () {
         var dy = st.targetY - st.y;
         var dist = Math.sqrt(dx * dx + dy * dy);
 
-        if (dist < 3) {
+        if (dist < 2.5) {
+          st.speed = 0;
           setMode('idle');
           scheduleWander();
         } else {
-          var step = Math.min(WALK_SPEED * dt, dist);
+          // Ease in/out of the trot: accelerate from rest, brake on approach
+          var desired = Math.min(WALK_SPEED, 26 + dist * 2.2);
+          st.speed += clamp(desired - st.speed, -520 * dt, 300 * dt);
+          var step = Math.min(st.speed * dt, dist);
           var ratio = step / dist;
           setFacing(dx < 0 ? 'left' : 'right');
           moveTo(st.x + dx * ratio, st.y + dy * ratio);
@@ -348,6 +577,8 @@ window.ZenzoManager = (function () {
       }
 
       if (st.mode === 'perched') pinToPerch();
+
+      updateRig(dt);
 
       // Keep active chat bubble glued above Zenzo as he moves
       if (activeBubble) {
@@ -436,6 +667,7 @@ window.ZenzoManager = (function () {
     if (st.reducedMotion) {
       st.x = destX;
       st.y = destY;
+      anim.hasPrev = false; // don't register the teleport as velocity
       charEl.style.left       = st.x + 'px';
       charEl.style.top        = st.y + 'px';
       charEl.style.transition = 'opacity 0.4s ease';
@@ -446,6 +678,7 @@ window.ZenzoManager = (function () {
       // Walk in horizontally at the saved Y so it looks continuous across pages
       st.x = fromRight ? window.innerWidth + 20 : -(W + 20);
       st.y = destY;
+      anim.hasPrev = false; // don't register the teleport as velocity
       charEl.style.left    = st.x + 'px';
       charEl.style.top     = st.y + 'px';
       charEl.style.opacity = '1';
@@ -468,40 +701,74 @@ window.ZenzoManager = (function () {
     try { sessionStorage.setItem('zenzo:called', '1'); } catch (e) {}
   }
 
-  // ── Double-click to summon ─────────────────────────────────────────────────
+  // ── Summon: double-click (desktop) + double-tap (touch) ───────────────────
+  var lastSummonTs = 0;
+
+  function summonTo(clientX, clientY, target) {
+    if (target && (charEl.contains(target) || menuEl.contains(target))) return;
+    // Don't hijack taps meant for interactive elements
+    if (target && target.closest &&
+        target.closest('a, button, input, textarea, select, [role="button"]')) return;
+
+    // Dedupe: native dblclick and the touch double-tap detector can both
+    // fire for the same gesture on some browsers
+    var now = Date.now();
+    if (now - lastSummonTs < 500) return;
+    lastSummonTs = now;
+
+    var tx = clampX(clientX - W / 2);
+    var ty = clampY(clientY - FOOT);
+
+    spawnCallRipple(clientX, clientY);
+
+    if (!hasEntered) {
+      // Trigger immediate entry aimed at the call point
+      hasEntered = true;
+      clearTimeout(entryTimerId);
+      var fromRight = clientX > window.innerWidth / 2;
+      st.x = fromRight ? window.innerWidth + 20 : -(W + 20);
+      st.y = clampY(clientY - H * 0.5);
+      anim.hasPrev = false; // don't register the teleport as velocity
+      charEl.style.left    = st.x + 'px';
+      charEl.style.top     = st.y + 'px';
+      charEl.style.opacity = '1';
+      setFacing(fromRight ? 'left' : 'right');
+      setTimeout(showHint, 3000);
+      scheduleBubble();
+    } else {
+      detachPerch();
+      clearTimeout(st.idleTimerId);
+      hideMenu();
+    }
+
+    st.targetX = tx;
+    st.targetY = ty;
+    setFacing(tx > st.x ? 'right' : 'left');
+    setMode('walking');
+  }
+
   function initDoubleClick() {
     document.addEventListener('dblclick', function (e) {
-      if (charEl.contains(e.target) || menuEl.contains(e.target)) return;
-
-      var tx = clampX(e.clientX - W / 2);
-      var ty = clampY(e.clientY - FOOT);
-
-      spawnCallRipple(e.clientX, e.clientY);
-
-      if (!hasEntered) {
-        // Trigger immediate entry aimed at the click point
-        hasEntered = true;
-        clearTimeout(entryTimerId);
-        var fromRight = e.clientX > window.innerWidth / 2;
-        st.x = fromRight ? window.innerWidth + 20 : -(W + 20);
-        st.y = clampY(e.clientY - H * 0.5);
-        charEl.style.left    = st.x + 'px';
-        charEl.style.top     = st.y + 'px';
-        charEl.style.opacity = '1';
-        setFacing(fromRight ? 'left' : 'right');
-        setTimeout(showHint, 3000);
-        scheduleBubble();
-      } else {
-        detachPerch();
-        clearTimeout(st.idleTimerId);
-        hideMenu();
-      }
-
-      st.targetX = tx;
-      st.targetY = ty;
-      setFacing(tx > st.x ? 'right' : 'left');
-      setMode('walking');
+      summonTo(e.clientX, e.clientY, e.target);
     });
+
+    // Touch screens: dblclick is unreliable (double-tap may zoom instead),
+    // so detect two quick taps near the same spot ourselves
+    var lastTapTs = 0, lastTapX = 0, lastTapY = 0;
+    document.addEventListener('touchend', function (e) {
+      if (e.touches.length > 0) return; // multi-touch gesture in progress
+      var t = e.changedTouches && e.changedTouches[0];
+      if (!t) return;
+      var now = Date.now();
+      var isDouble = (now - lastTapTs) < 400 &&
+                     Math.abs(t.clientX - lastTapX) < 48 &&
+                     Math.abs(t.clientY - lastTapY) < 48;
+      lastTapTs = now; lastTapX = t.clientX; lastTapY = t.clientY;
+      if (isDouble) {
+        lastTapTs = 0; // a triple tap shouldn't summon twice
+        summonTo(t.clientX, t.clientY, e.target);
+      }
+    }, { passive: true });
   }
 
   function spawnCallRipple(x, y) {
@@ -593,7 +860,14 @@ window.ZenzoManager = (function () {
       clearDropHighlight();
 
       if (!didMove) {
-        // Treat as click → pet
+        // Long-press already opened the action menu — don't also pet
+        if (longPressFired) {
+          longPressFired = false;
+          setMode('idle');
+          scheduleWander();
+          return;
+        }
+        // Treat as click/tap → pet
         doPet();
         setMode('idle');
         scheduleWander();
@@ -694,51 +968,55 @@ window.ZenzoManager = (function () {
   }
 
   function playLand() {
+    kickRig(0.8);                   // impact ripples through ears / antenna / tail
     charEl.classList.remove('zenzo--landing');
     void charEl.offsetWidth; // reflow to restart animation
     charEl.classList.add('zenzo--landing');
     setTimeout(function () { charEl.classList.remove('zenzo--landing'); }, 380);
   }
 
-  // ── SVG assets for actions ────────────────────────────────────────────────
-  // Food bowl with visible kibble pieces
+  // ── SVG assets for actions (pixel-art, same palette as the sprite) ──────
+  // Food bowl with chunky kibble pixels
   var BOWL_SVG =
-    '<svg viewBox="0 0 60 50" width="100%" height="100%" aria-hidden="true">' +
-      // ground shadow
-      '<ellipse cx="30" cy="46" rx="22" ry="2.5" fill="rgba(0,0,0,0.25)"/>' +
-      // bowl outer body
-      '<path d="M 8 26 Q 8 46 30 46 Q 52 46 52 26 Z" fill="#c4c4c4"/>' +
-      '<path d="M 8 26 Q 8 46 30 46 Q 52 46 52 26 Z" fill="none" stroke="#909090" stroke-width="1"/>' +
-      // bowl rim shadow
-      '<ellipse cx="30" cy="26" rx="22" ry="6" fill="#909090"/>' +
-      '<ellipse cx="30" cy="25" rx="20" ry="5" fill="#5a5a5a"/>' +
+    '<svg viewBox="0 0 16 12" width="100%" height="100%" shape-rendering="crispEdges" aria-hidden="true">' +
       // kibble pieces (warm browns)
-      '<ellipse cx="22" cy="22" rx="4" ry="3.2" fill="#c47734"/>' +
-      '<ellipse cx="32" cy="20" rx="3.5" ry="2.8" fill="#a55d24"/>' +
-      '<ellipse cx="38" cy="23" rx="4.2" ry="3" fill="#c47734"/>' +
-      '<ellipse cx="28" cy="24" rx="3.2" ry="2.5" fill="#8a4a18"/>' +
-      // kibble highlights
-      '<ellipse cx="21" cy="21" rx="1.2" ry="0.8" fill="rgba(255,220,180,0.7)"/>' +
-      '<ellipse cx="37" cy="22" rx="1.3" ry="0.8" fill="rgba(255,220,180,0.7)"/>' +
+      '<rect x="4" y="2" width="2" height="2" fill="#c47734"/>' +
+      '<rect x="7" y="1" width="2" height="2" fill="#a55d24"/>' +
+      '<rect x="10" y="2" width="2" height="2" fill="#c47734"/>' +
+      '<rect x="4" y="2" width="1" height="1" fill="#e8a55e"/>' +
+      // bowl outline + body
+      '<path d="M1 4 L15 4 L15 8 L14 8 L14 10 L12 10 L12 11 L4 11 L4 10 L2 10 L2 8 L1 8 Z" fill="#222034"/>' +
+      '<path d="M2 5 L14 5 L14 8 L13 8 L13 9 L12 9 L12 10 L4 10 L4 9 L3 9 L3 8 L2 8 Z" fill="#aebccd"/>' +
+      '<rect x="2" y="5" width="12" height="1" fill="#dbe3ee"/>' +
+      // teal accent stripe
+      '<rect x="3" y="7" width="10" height="1" fill="#2bb3b3"/>' +
     '</svg>';
 
-  // Cute cyan-and-white striped ball
+  // Pixel pokeball-style play ball
   var BALL_SVG =
-    '<svg viewBox="0 0 30 30" width="100%" height="100%" aria-hidden="true">' +
-      // shadow
-      '<ellipse cx="15" cy="28" rx="10" ry="1.5" fill="rgba(0,0,0,0.25)"/>' +
-      // ball body
-      '<circle cx="15" cy="14" r="12" fill="white" stroke="#bbb" stroke-width="0.5"/>' +
-      // cyan stripe across the ball
-      '<path d="M 4 16 Q 15 9 26 16" fill="none" stroke="#5becec" stroke-width="3.5" stroke-linecap="round"/>' +
-      // highlight
-      '<ellipse cx="11" cy="10" rx="3.5" ry="2.5" fill="rgba(255,255,255,0.7)"/>' +
-      '<ellipse cx="11" cy="10" rx="1.5" ry="1" fill="rgba(255,255,255,0.95)"/>' +
+    '<svg viewBox="0 0 12 12" width="100%" height="100%" shape-rendering="crispEdges" aria-hidden="true">' +
+      // stepped circle outline
+      '<path d="M4 0 L8 0 L8 1 L10 1 L10 2 L11 2 L11 4 L12 4 L12 8 L11 8 L11 10 L10 10 L10 11 L8 11 L8 12 L4 12 L4 11 L2 11 L2 10 L1 10 L1 8 L0 8 L0 4 L1 4 L1 2 L2 2 L2 1 L4 1 Z" fill="#222034"/>' +
+      // red top hemisphere
+      '<rect x="4" y="1" width="4" height="1" fill="#e84a4a"/>' +
+      '<rect x="2" y="2" width="8" height="2" fill="#e84a4a"/>' +
+      '<rect x="1" y="4" width="10" height="1" fill="#e84a4a"/>' +
+      '<rect x="3" y="2" width="2" height="1" fill="#ff8e8e"/>' +
+      // center band
+      '<rect x="1" y="5" width="10" height="2" fill="#222034"/>' +
+      // white bottom hemisphere
+      '<rect x="1" y="7" width="10" height="1" fill="#ffffff"/>' +
+      '<rect x="2" y="8" width="8" height="2" fill="#ffffff"/>' +
+      '<rect x="4" y="10" width="4" height="1" fill="#dbe3ee"/>' +
+      // center button
+      '<rect x="4" y="4" width="4" height="4" fill="#222034"/>' +
+      '<rect x="5" y="5" width="2" height="2" fill="#ffffff"/>' +
     '</svg>';
 
   // ── Actions ───────────────────────────────────────────────────────────────
   function doPet() {
     st.stats.happiness = Math.min(100, st.stats.happiness + 6);
+    kickRig(1);                     // ears flap + tail wags hard via spring impulse
     spawnHearts(3);                 // 3 cyan hearts staggered above head
     charEl.classList.remove('zenzo--happy');
     void charEl.offsetWidth;
@@ -916,17 +1194,25 @@ window.ZenzoManager = (function () {
     }, 7000);
   }
 
-  // ── Particles ─────────────────────────────────────────────────────────────
-  // Cyan SVG heart matching the reference design
+  // ── Particles (pixel-art) ─────────────────────────────────────────────────
+  // Classic 8-bit heart
   var HEART_SVG =
-    '<svg viewBox="0 0 24 24" width="100%" height="100%" fill="#5becec" aria-hidden="true">' +
-      '<path d="M12 21s-7-4.5-9-9c-1.5-3.6 1.1-7 4.5-7 2 0 3.7 1 4.5 3 .8-2 2.5-3 4.5-3 3.4 0 6 3.4 4.5 7-2 4.5-9 9-9 9z"/>' +
+    '<svg viewBox="0 0 7 6" width="100%" height="100%" shape-rendering="crispEdges" aria-hidden="true">' +
+      '<rect x="1" y="0" width="2" height="1" fill="#f2607a"/>' +
+      '<rect x="4" y="0" width="2" height="1" fill="#f2607a"/>' +
+      '<rect x="0" y="1" width="7" height="2" fill="#f2607a"/>' +
+      '<rect x="1" y="3" width="5" height="1" fill="#f2607a"/>' +
+      '<rect x="2" y="4" width="3" height="1" fill="#f2607a"/>' +
+      '<rect x="3" y="5" width="1" height="1" fill="#f2607a"/>' +
+      '<rect x="1" y="1" width="1" height="1" fill="#ffaebc"/>' +
     '</svg>';
 
-  // Cyan SVG sparkle (4-pointed star)
+  // Pixel plus-sign sparkle
   var SPARKLE_SVG =
-    '<svg viewBox="-10 -10 20 20" width="100%" height="100%" aria-hidden="true">' +
-      '<path d="M0,-9 L1.8,-1.8 L9,0 L1.8,1.8 L0,9 L-1.8,1.8 L-9,0 L-1.8,-1.8 Z" fill="#5becec"/>' +
+    '<svg viewBox="0 0 5 5" width="100%" height="100%" shape-rendering="crispEdges" aria-hidden="true">' +
+      '<rect x="2" y="0" width="1" height="5" fill="#3ee6e6"/>' +
+      '<rect x="0" y="2" width="5" height="1" fill="#3ee6e6"/>' +
+      '<rect x="2" y="2" width="1" height="1" fill="#b8fbfb"/>' +
     '</svg>';
 
   function spawnParticle(type) {
@@ -940,8 +1226,7 @@ window.ZenzoManager = (function () {
       'width:'  + size + 'px;' +
       'height:' + size + 'px;' +
       'pointer-events:none;' +
-      'filter:drop-shadow(0 0 4px rgba(91,236,236,0.6));' +
-      'animation:' + animation + ' 1s ease-out forwards;';
+      'animation:' + animation + ' 1s steps(6) forwards;';
     container.appendChild(p);
     setTimeout(function () { if (container.contains(p)) container.removeChild(p); }, 1100);
   }
@@ -968,7 +1253,7 @@ window.ZenzoManager = (function () {
       'width:'  + size + 'px;' +
       'height:' + size + 'px;' +
       'pointer-events:none;opacity:0.7;' +
-      'animation:zenzo-walk-dust 0.7s ease-out forwards;';
+      'animation:zenzo-walk-dust 0.7s steps(5) forwards;';
     toysEl.appendChild(sparkle);
     setTimeout(function () { if (toysEl.contains(sparkle)) toysEl.removeChild(sparkle); }, 800);
   }
@@ -983,7 +1268,7 @@ window.ZenzoManager = (function () {
       'position:absolute;top:4px;left:' + (20 + Math.random() * 40) + '%;' +
       'font-family:"JetBrains Mono",monospace;font-size:' + size + 'px;' +
       'color:#00c8c8;font-weight:700;pointer-events:none;' +
-      'animation:zenzo-sleep-z ' + (0.9 + Math.random() * 0.5) + 's ease-out forwards;';
+      'animation:zenzo-sleep-z ' + (0.9 + Math.random() * 0.5) + 's steps(6) forwards;';
     container.appendChild(z);
     setTimeout(function () { if (container.contains(z)) container.removeChild(z); }, 1500);
 
@@ -1030,13 +1315,18 @@ window.ZenzoManager = (function () {
   }
 
   // Touch long-press to open menu
-  var touchTimer = null;
+  var touchTimer = null, longPressFired = false;
   function initTouchMenu() {
     charEl.addEventListener('touchstart', function (e) {
+      longPressFired = false;
       touchTimer = setTimeout(function () {
+        longPressFired = true;
         showMenu();
       }, 500);
     }, { passive: true });
+
+    // Long-press must open Zenzo's menu, not the browser context menu
+    charEl.addEventListener('contextmenu', function (e) { e.preventDefault(); });
 
     charEl.addEventListener('touchend',   function () { clearTimeout(touchTimer); });
     charEl.addEventListener('touchmove',  function () { clearTimeout(touchTimer); });
@@ -1142,7 +1432,9 @@ window.ZenzoManager = (function () {
 
     var hint = document.createElement('div');
     hint.id = 'zenzo-hint';
-    hint.textContent = 'Drag Zenzo anywhere • hover to interact • drop on elements to perch';
+    hint.textContent = window.matchMedia('(pointer: coarse)').matches
+      ? 'Tap Zenzo to pet • press & hold for actions • drag to move'
+      : 'Drag Zenzo anywhere • hover to interact • drop on elements to perch';
     document.body.appendChild(hint);
 
     setTimeout(function () {
@@ -1163,6 +1455,7 @@ window.ZenzoManager = (function () {
   // ── Init ──────────────────────────────────────────────────────────────────
   function init() {
     inject();
+    initRig();
     loadStats();
 
     // Start hidden off-screen — enterFromEdge() makes Zenzo visible

@@ -68,6 +68,9 @@ body {
   font-family: 'DM Sans', sans-serif;
   font-size: 16px;
   line-height: 1.6;
+  /* allow scroll + pinch-zoom but remove double-tap zoom and tap delay,
+     so double-tap reliably reaches the page (e.g. summoning Zenzo) */
+  touch-action: manipulation;
   transition:
     background-color var(--dur-standard) var(--ease-spring),
     color            var(--dur-standard) var(--ease-spring);
